@@ -1,0 +1,1 @@
+{ "id": "git-integration", "name": "Git Integration", "version": "1.0.0", "author": "TermC", "icon": "branch", "description": "Shows the branch and change count of the focused terminal in the status bar, plus quick commands to copy the branch name and open the remote in your browser.", "permissions": ["exec"] }

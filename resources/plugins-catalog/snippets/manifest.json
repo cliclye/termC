@@ -1,0 +1,1 @@
+{ "id": "snippets", "name": "Snippets", "version": "1.0.0", "author": "TermC", "icon": "copy", "description": "Insert UUIDs, timestamps and saved snippets with ⌥⌘U / ⌥⌘I, or from the terminal right-click menu.", "permissions": [] }

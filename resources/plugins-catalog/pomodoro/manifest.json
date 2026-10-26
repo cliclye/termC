@@ -1,0 +1,1 @@
+{ "id": "pomodoro", "name": "Pomodoro", "version": "1.0.0", "author": "TermC", "icon": "history", "description": "A 25/5 focus timer in the status bar. Click it to start or pause; you get a notification when each session ends.", "permissions": [] }

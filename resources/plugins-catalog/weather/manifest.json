@@ -1,0 +1,1 @@
+{ "id": "weather", "name": "Weather", "version": "1.0.0", "author": "TermC", "icon": "globe", "description": "Current weather in the status bar via the free wttr.in service. Set your city with a command.", "permissions": ["http"] }

@@ -1,0 +1,1 @@
+{ "id": "system-monitor", "name": "System Monitor", "version": "1.0.0", "author": "TermC", "icon": "cpu", "description": "CPU load and memory pressure in the status bar, refreshed every few seconds.", "permissions": ["exec"] }

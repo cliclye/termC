@@ -1,0 +1,1 @@
+{ "id": "port-killer", "name": "Port Killer", "version": "1.0.0", "author": "TermC", "icon": "bolt", "description": "Find which process is listening on a port and stop it — handy when a dev server didn't shut down.", "permissions": ["exec"] }
