@@ -9,7 +9,7 @@ const http = require('node:http');
 const TOOLS = require('./tools');
 
 const CONTROL = path.join(process.env.TERMC_HOME || path.join(os.homedir(), '.termc'), 'control.json');
-const SERVER_INFO = { name: 'termc', version: '1.0.0' };
+const SERVER_INFO = { name: 'termc', version: '1.1.0' };
 
 function callApp(method, params) {
   let cfg;
@@ -50,7 +50,7 @@ async function handle(msg) {
       return write({
         jsonrpc: '2.0',
         id,
-        result: { protocolVersion: params?.protocolVersion || '2025-06-18', capabilities: { tools: { listChanged: false } }, serverInfo: SERVER_INFO, instructions: 'Control TermC terminals, panes, tabs, workspaces, git, files and dev-server previews. Omit paneId to target the focused pane.' },
+        result: { protocolVersion: params?.protocolVersion || '2025-06-18', capabilities: { tools: { listChanged: false } }, serverInfo: SERVER_INFO, instructions: 'Control TermC terminals, panes, tabs, workspaces, git, files, dev-server previews and Spotify playback. Omit paneId to target the focused pane.' },
       });
     }
     if (method === 'ping') return write({ jsonrpc: '2.0', id, result: {} });

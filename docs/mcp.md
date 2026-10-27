@@ -62,12 +62,13 @@ claude mcp add --scope user termc -- node /path/to/termC/mcp/termc-mcp.js
 - *"Run the tests in a new pane and summarize the failures."* → `pane_split`, `terminal_run`
 - *"Make a worktree for feature/payments and open it in a new tab."* → `git_worktree_add`
 - *"Which process is my API server running in, and what did it last print?"* → `terminal_list`, `terminal_read`
+- *"Put on some lofi while you work on this."* → `spotify_play` with `query: "Lofi Beats"`
 
 `terminal_run` waits for the command to finish (using the shell's own start/end markers) and returns exactly what it printed plus the exit code. For long-running processes such as servers and watchers, pass `wait: false` and then use `terminal_wait_for` / `terminal_read`.
 
 Most tools target the **focused pane** when `paneId` is omitted. Get IDs from `terminal_list`.
 
-## Tool reference (72 tools)
+## Tool reference (78 tools)
 
 `?` marks an optional argument.
 
@@ -169,6 +170,17 @@ Most tools target the **focused pane** when `paneId` is omitted. Get IDs from `t
 |---|---|---|
 | `ai_sessions_list` | List recent Claude Code / Codex / Gemini sessions for a directory. | `cwd`? |
 | `ai_session_resume` | Resume an AI CLI session in a new tab. | `cwd`?, `command` |
+
+### Spotify
+
+| Tool | What it does | Arguments |
+|---|---|---|
+| `spotify_now_playing` | What Spotify is playing: track, artist, album, position, volume, shuffle/repeat, and whether Spotify is open. | — |
+| `spotify_control` | Control Spotify playback. | `action` (`toggle`, `play`, `pause`, `next`, `previous`, `shuffle_on`, `shuffle_off`, `repeat_on`, `repeat_off`) |
+| `spotify_play` | Play a Spotify link/URI (playlist, album, track, artist) or one of the user's saved items by name. Opens Spotify in the background if needed. | `query` |
+| `spotify_set_volume` | Set Spotify volume (0–100). | `volume` |
+| `spotify_seek` | Jump to a position in the current track. | `seconds` |
+| `spotify_saved_list` | List the user's saved Spotify playlists, albums and songs. | — |
 
 ### App
 

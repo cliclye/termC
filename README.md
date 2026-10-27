@@ -94,9 +94,15 @@ TermC notices when Claude Code, Codex CLI or Gemini CLI is running in a pane. If
 
 Press `⌃⇧⌘S` anywhere on your Mac (or `⇧⌘S` inside TermC) and select a region. The image is saved per project and its path is pasted into the focused pane, where Claude Code shows it as `[Image #N]`. The shortcut is configurable, and Settings → Screenshots has the full history.
 
+### Spotify, without leaving the terminal
+
+Press `⇧⌘M` for a full player in the sidebar: album art, seek, shuffle, repeat, volume and your saved playlists. A mini player in the status bar shows the current song with previous / play / next, and `⌥⌘P`, `⌥⌘.` and `⌥⌘,` work from anywhere in TermC. Paste any Spotify link to play it or save it. Every saved item also shows up in `⌘K` as "Spotify: Play …". It controls the Spotify app on your Mac, so there's no login or API key.
+
+<p align="center"><img src="docs/images/spotify.png" width="300" alt="Spotify player in the TermC sidebar" /></p>
+
 ### MCP server: let agents drive your terminal
 
-The 72 MCP tools let Claude Code, Cursor and Windsurf run commands and read their output, split panes, manage tabs and workspaces, use Git, search files and open previews.
+The 78 MCP tools let Claude Code, Cursor and Windsurf run commands and read their output, split panes, manage tabs and workspaces, use Git, search files, open previews and even change the music.
 
 ```bash
 claude mcp add --scope user termc -e ELECTRON_RUN_AS_NODE=1 -- \
@@ -140,7 +146,7 @@ Panels slide, overlays fade and scale, new panes and tabs grow into place, and t
 | [Features](docs/features.md) | Every feature in detail |
 | [Keyboard shortcuts](docs/keyboard-shortcuts.md) | Full shortcut reference |
 | [AI features](docs/ai.md) | AI commands, providers, session resume, screenshots |
-| [MCP server](docs/mcp.md) | Setup for Claude Code / Cursor / Windsurf and all 72 tools |
+| [MCP server](docs/mcp.md) | Setup for Claude Code / Cursor / Windsurf and all 78 tools |
 | [Plugins](docs/plugins.md) | Plugin API reference and examples |
 | [Architecture](docs/architecture.md) | How the app is put together, for contributors |
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |

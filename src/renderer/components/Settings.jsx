@@ -15,6 +15,7 @@ const SECTIONS = [
   ['aliases', 'Aliases', 'bolt'],
   ['screenshots', 'Screenshots', 'camera'],
   ['mcp', 'MCP', 'link'],
+  ['spotify', 'Spotify', 'music'],
   ['plugins', 'Plugins', 'puzzle'],
   ['store', 'Plugin Store', 'store'],
   ['shortcuts', 'Shortcuts', 'keyboard'],
@@ -48,6 +49,7 @@ export default function Settings({ overlay, close }) {
         {section === 'aliases' && <Aliases />}
         {section === 'screenshots' && <Screenshots />}
         {section === 'mcp' && <Mcp />}
+        {section === 'spotify' && <SpotifySettings />}
         {section === 'plugins' && <Plugins goStore={() => setSection('store')} />}
         {section === 'store' && <Store />}
         {section === 'shortcuts' && <Shortcuts />}
@@ -341,6 +343,31 @@ function Copyable({ text }) {
       <pre>{text}</pre>
       <button className="btn sm" onClick={() => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); }}>{ok ? <><Icon name="check" size={12} /> Copied</> : <><Icon name="copy" size={12} /> Copy</>}</button>
     </div>
+  );
+}
+
+function SpotifySettings() {
+  const sp = S.useStore((x) => x.settings.spotify) || {};
+  const set = (patch) => S.saveSettings({ spotify: { ...sp, ...patch } });
+  return (
+    <>
+      <h2>Spotify</h2>
+      <p className="muted">
+        Control the Spotify app without leaving TermC: play, pause, skip, seek, volume and your saved playlists. TermC talks to the Spotify app on this Mac, so there's no
+        login or API key. The first time, macOS asks whether TermC may control Spotify.
+      </p>
+      <Row label="Enable Spotify" hint="Shows the player in the sidebar (⇧⌘M) and adds Spotify commands to the palette."><Toggle value={sp.enabled !== false} onChange={(v) => set({ enabled: v })} /></Row>
+      <Row label="Mini player in status bar" hint="The current song with previous / play / next buttons."><Toggle value={sp.statusBar !== false} onChange={(v) => set({ statusBar: v })} /></Row>
+      <Row label="Saved music" hint="Manage these in the Spotify panel. Each one is also in the command palette as “Spotify: Play …”.">
+        <span className="dim">{(sp.favorites || []).length} saved</span>
+      </Row>
+      <Row label="Keyboard" hint="Change these in Shortcuts.">
+        <span className="dim">⌥⌘P play/pause · ⌥⌘. next · ⌥⌘, previous</span>
+      </Row>
+      <Row label="Permission" hint="If controls stop working, allow TermC → Spotify in Automation settings.">
+        <button className="btn sm" onClick={() => api.invoke('spotify:openPrivacy')}>Open Automation Settings</button>
+      </Row>
+    </>
   );
 }
 

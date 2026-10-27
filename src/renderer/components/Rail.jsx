@@ -14,6 +14,7 @@ export default function Rail() {
   const panels = S.useStore((s) => s.plugin.panels);
   const previewOpen = S.useStore((s) => s.preview.open);
   const servers = S.useStore((s) => s.devServers.length);
+  const spotifyOn = S.useStore((s) => s.settings?.spotify?.enabled !== false);
   const [dragId, setDragId] = useState(null);
 
   const views = [
@@ -21,6 +22,7 @@ export default function Rail() {
     { id: 'git', icon: 'branch', title: 'Git (⌘G)' },
     { id: 'run', icon: 'play', title: 'Run commands (⇧⌘R)' },
     { id: 'sessions', icon: 'sparkles', title: 'AI sessions (⇧⌘A)' },
+    ...(spotifyOn ? [{ id: 'spotify', icon: 'music', title: 'Spotify (⇧⌘M)' }] : []),
     ...Object.values(panels).map((p) => ({ id: `plugin:${p.id}`, icon: p.icon || 'puzzle', title: p.title })),
   ];
 

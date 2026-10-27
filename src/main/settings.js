@@ -35,6 +35,18 @@ const DEFAULTS = {
   screenshotShortcut: DEFAULT_SHOT,
   settingsVersion: VERSION,
   enabledPlugins: {},
+  spotify: {
+    enabled: true,
+    statusBar: true,
+    // Spotify's own coding/focus playlists; users can add and remove their own.
+    favorites: [
+      { name: 'Lofi Beats', uri: 'spotify:playlist:37i9dQZF1DWWQRwui0ExPn' },
+      { name: 'Deep Focus', uri: 'spotify:playlist:37i9dQZF1DWZeKCadgRdKQ' },
+      { name: 'Coding Mode', uri: 'spotify:playlist:37i9dQZF1DX5trt9i14X7j' },
+      { name: 'Brain Food', uri: 'spotify:playlist:37i9dQZF1DWXLeA8Omikj7' },
+      { name: 'Peaceful Piano', uri: 'spotify:playlist:37i9dQZF1DX4sWSpwq3LiO' },
+    ],
+  },
 };
 
 let cache = null;
@@ -57,7 +69,7 @@ function encrypt(v) {
 function load() {
   if (cache) return cache;
   const raw = readJSON(FILE, {});
-  cache = { ...DEFAULTS, ...raw, ai: { ...DEFAULTS.ai, ...(raw.ai || {}) } };
+  cache = { ...DEFAULTS, ...raw, ai: { ...DEFAULTS.ai, ...(raw.ai || {}) }, spotify: { ...DEFAULTS.spotify, ...(raw.spotify || {}) } };
   for (const k of SECRET_KEYS) cache.ai[k] = decrypt(cache.ai[k]);
   if (!(raw.settingsVersion >= 2)) {
     if (cache.screenshotShortcut === OLD_SHOT) cache.screenshotShortcut = DEFAULT_SHOT;
@@ -67,6 +79,7 @@ function load() {
   cache.fontSize = clamp(cache.fontSize, 8, 32, 13);
   cache.scrollback = clamp(cache.scrollback, 500, 200000, 10000);
   cache.lineHeight = clamp(cache.lineHeight, 1, 2, 1.25);
+  if (!Array.isArray(cache.spotify.favorites)) cache.spotify.favorites = DEFAULTS.spotify.favorites;
   return cache;
 }
 
@@ -76,7 +89,7 @@ function clamp(v, lo, hi, fallback) {
 }
 
 function save(next) {
-  cache = { ...load(), ...next, ai: { ...load().ai, ...(next.ai || {}) } };
+  cache = { ...load(), ...next, ai: { ...load().ai, ...(next.ai || {}) }, spotify: { ...load().spotify, ...(next.spotify || {}) } };
   cache.fontSize = clamp(cache.fontSize, 8, 32, 13);
   cache.scrollback = clamp(cache.scrollback, 500, 200000, 10000);
   cache.lineHeight = clamp(cache.lineHeight, 1, 2, 1.25);

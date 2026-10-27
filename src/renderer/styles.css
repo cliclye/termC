@@ -817,3 +817,68 @@ body.resizing .split-child { transition: none; }
 .error-box { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; margin: 12px; border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--danger) 7%, var(--panel)); font-size: 12.5px; max-width: 420px; }
 .error-box span { color: var(--muted); overflow-wrap: anywhere; }
 .statusbar .error-box, .tabbar .error-box { margin: 0; padding: 4px 8px; flex-direction: row; }
+
+/* ---------------- Spotify ---------------- */
+.sp-now { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 4px 10px 6px; animation: sectionIn 0.28s ease; }
+.sp-art-wrap { position: relative; width: 100%; max-width: 236px; aspect-ratio: 1; margin: 2px auto 2px; }
+.sp-art { position: relative; width: 100%; height: 100%; border-radius: 10px; object-fit: cover; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent); animation: artIn 0.35s ease; }
+.sp-art-glow { position: absolute; inset: 8% 6% -6%; width: 88%; height: 98%; border-radius: 50%; filter: blur(26px) saturate(1.4); opacity: 0.45; transition: opacity 0.4s; }
+.sp-art-empty { display: grid; place-items: center; background: var(--elevated); color: var(--muted); }
+@keyframes artIn { from { opacity: 0; transform: scale(0.96); } }
+.sp-meta { min-width: 0; }
+.sp-title-row { display: flex; align-items: center; gap: 6px; }
+.sp-title { font-size: 14.5px; font-weight: 650; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-artist { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-heart.on { color: #1ed760; }
+.sp-heart:active { transform: scale(0.85); }
+
+/* Range sliders: thin track that thickens on hover, filled up to --pct. */
+.sp-progress input[type='range'], .sp-volume input[type='range'] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 14px; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer;
+}
+.sp-progress input[type='range']::-webkit-slider-runnable-track, .sp-volume input[type='range']::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 4px; transition: height 0.15s;
+  background: linear-gradient(to right, var(--text) var(--pct), color-mix(in srgb, var(--muted) 28%, transparent) var(--pct));
+}
+.sp-progress input[type='range']:hover::-webkit-slider-runnable-track, .sp-volume input[type='range']:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #1ed760 var(--pct), color-mix(in srgb, var(--muted) 28%, transparent) var(--pct));
+}
+.sp-progress input[type='range']::-webkit-slider-thumb, .sp-volume input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text); margin-top: -4px; opacity: 0; transform: scale(0.6); transition: opacity 0.15s, transform 0.15s; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.sp-progress input[type='range']:hover::-webkit-slider-thumb, .sp-volume input[type='range']:hover::-webkit-slider-thumb { opacity: 1; transform: scale(1); }
+.sp-progress input[type='range']:disabled { cursor: default; opacity: 0.4; }
+.sp-times { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+.sp-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: -4px; }
+.sp-btn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); transition: color 0.15s, background 0.15s, transform 0.1s; position: relative; }
+.sp-btn:hover { color: var(--text); background: var(--hover); }
+.sp-btn:active, .sp-play:active { transform: scale(0.9); }
+.sp-btn.on { color: #1ed760; }
+.sp-btn.on::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.sp-play { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--text); color: var(--bg); transition: transform 0.12s, filter 0.15s; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+.sp-play:hover { transform: scale(1.06); }
+.sp-volume { display: flex; align-items: center; gap: 6px; }
+.sp-vol-num { font-size: 10.5px; color: var(--muted); width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.sp-lists { padding-top: 2px; }
+.sp-fav { cursor: pointer; }
+.sp-fav.dragging { opacity: 0.4; }
+.sp-fav-icon { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; flex: none; color: #1ed760; background: color-mix(in srgb, #1ed760 12%, transparent); }
+.sp-kind { font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
+.sp-add { display: flex; gap: 4px; padding: 8px 8px 2px; }
+.sp-add input { flex: 1; min-width: 0; height: 26px; font-size: 12px; }
+.sp-err { font-size: 11.5px; color: var(--danger); padding: 4px 10px 0; }
+
+/* Status bar mini player */
+.sb-player { display: flex; align-items: center; gap: 0; margin-right: 6px; padding-right: 6px; border-right: 1px solid var(--border); animation: fadein 0.25s ease; min-width: 0; }
+.sb-track { position: relative; max-width: 260px; overflow: hidden; }
+.sb-track-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-track-bar { position: absolute; left: 7px; bottom: 1px; height: 1.5px; max-width: calc(100% - 14px); background: #1ed760; border-radius: 2px; opacity: 0.7; transition: width 1s linear; }
+.sb-mini { width: 20px; height: 20px; border-radius: 4px; display: grid; place-items: center; color: var(--muted); }
+.sb-mini:hover { color: var(--text); background: var(--hover); }
+.sb-eq { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 10px; width: 11px; }
+.sb-eq i { flex: 1; background: #1ed760; border-radius: 1px; height: 100%; transform-origin: bottom; animation: eq 0.9s ease-in-out infinite; }
+.sb-eq i:nth-child(2) { animation-delay: -0.3s; animation-duration: 0.7s; }
+.sb-eq i:nth-child(3) { animation-delay: -0.6s; animation-duration: 1.1s; }
+@keyframes eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }

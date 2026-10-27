@@ -12,6 +12,7 @@ TermC is an Electron app: a Node **main process** owns shells, Git and the files
 │ ai.js         NL → command (Claude CLI / Ollama / Anthropic / OpenAI)   │
 │ aiSessions.js Claude/Codex/Gemini session discovery + resume commands   │
 │ plugins.js    plugin install + permission-gated privileged API          │
+│ spotify.js    Spotify app control (JXA via osascript) + change events   │
 │ screenshots.js, aliases.js, settings.js                                 │
 │ control.js    127.0.0.1 HTTP endpoint for the MCP bridge                │
 └────────────────────────────── IPC (preload.js) ─────────────────────────┘
@@ -21,6 +22,7 @@ TermC is an Electron app: a Node **main process** owns shells, Git and the files
 │ terminals.js    xterm.js instances (live outside React)                 │
 │ commands.js     command registry + keybindings                          │
 │ control.js      executes MCP tool calls                                  │
+│ spotify.js      player state, optimistic controls, saved music          │
 │ plugin-host.js  Web Worker plugin runtime                               │
 │ components/     React UI                                                 │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -69,3 +71,5 @@ bash uses `--rcfile` with `PROMPT_COMMAND`/`PS0`, and fish uses `--init-command`
 - Keep main-process code free of UI concerns, and keep renderer code talking to main only through `window.termc` (preload).
 - New user-facing actions should be commands in `commands.js` so they get a palette entry and an optional shortcut. If agents should be able to use them, also add an MCP tool (`mcp/tools.js` + a handler in `renderer/control.js`).
 - Test against a throwaway data folder: `TERMC_HOME=/tmp/termc-test npm start`.
+
+**Spotify.** `src/main/spotify.js` runs one small JavaScript-for-Automation script through `osascript` for every action, queued so rapid clicks apply in order. `Application('Spotify')` throws instead of prompting when Spotify isn't installed, and `.running()` checks without launching it. Spotify posts the `com.spotify.client.PlaybackStateChanged` distributed notification on every change, which main subscribes to with `systemPreferences.subscribeNotification`, so the UI updates instantly and only polls slowly (5 s while open, 15 s otherwise) as a fallback. The renderer keeps player state in its own small store (`src/renderer/spotify.js`) so playback updates never trigger session saves, and extrapolates the position locally while playing.

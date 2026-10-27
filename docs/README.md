@@ -4,7 +4,7 @@
 - **[Features](features.md)**: a tour of everything TermC does
 - **[Keyboard shortcuts](keyboard-shortcuts.md)**
 - **[AI features](ai.md)**: AI commands, providers, session resume, screenshots
-- **[MCP server](mcp.md)**: let Claude Code, Cursor and Windsurf control TermC (72 tools)
+- **[MCP server](mcp.md)**: let Claude Code, Cursor and Windsurf control TermC (78 tools)
 - **[Plugins](plugins.md)**: write plugins; full API reference
 - **[Architecture](architecture.md)**: code layout and how the pieces talk, for contributors
 - **[Troubleshooting](troubleshooting.md)**

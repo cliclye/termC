@@ -14,6 +14,7 @@ const aiSessions = require('./aiSessions');
 const plugins = require('./plugins');
 const screenshots = require('./screenshots');
 const control = require('./control');
+const spotify = require('./spotify');
 const { PtyManager } = require('./pty');
 const { DevServers } = require('./devservers');
 
@@ -70,6 +71,7 @@ ptys.on('cwd', (id, cwd) => send('pty:cwd', id, cwd));
 ptys.on('command', (id, info) => send('pty:command', id, info));
 ptys.on('process', (id, info) => send('pty:process', id, info));
 dev.on('change', (list) => send('devservers', list));
+spotify.watch((st) => send('spotify:state', st));
 
 // Apps launched from Finder get a minimal PATH; borrow the login shell's.
 function loadLoginPath() {
@@ -368,6 +370,13 @@ handle('screenshots:capture', () => takeScreenshot());
 handle('screenshots:openDir', () => shell.openPath(screenshots.DIR));
 
 handle('devservers:list', () => dev.list());
+
+handle('spotify:state', () => spotify.state());
+handle('spotify:call', (action, arg) => spotify.call(action, arg));
+handle('spotify:playUri', (input) => spotify.playUri(input));
+handle('spotify:launch', () => spotify.launch());
+handle('spotify:show', () => execFile('open', ['-b', 'com.spotify.client'], () => {}));
+handle('spotify:openPrivacy', () => shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'));
 
 handle('state:load', () => {
   const state = readJSON(STATE_FILE, null);

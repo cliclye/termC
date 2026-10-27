@@ -6,6 +6,7 @@ import { allCommands, runCommand } from './commands';
 import { allThemes } from './theme-registry';
 import { setPluginEnabled } from './plugin-host';
 import { fuzzyFilter } from './fuzzy';
+import * as SP from './spotify';
 
 const api = window.termc;
 
@@ -214,6 +215,22 @@ const handlers = {
   plugin_set_enabled: async (p) => (await setPluginEnabled(p.id, p.enabled), { ok: true }),
   command_list: () => allCommands().map((c) => ({ id: c.id, title: c.title, category: c.category, keys: c.keys || null })),
   command_execute: async (p) => (await runCommand(p.id), { ok: true }),
+  spotify_now_playing: () => api.invoke('spotify:state'),
+  spotify_control: (p) => {
+    const [action, flag] = p.action.split('_');
+    return flag ? api.invoke('spotify:call', action, flag === 'on') : api.invoke('spotify:call', action);
+  },
+  spotify_play: async (p) => {
+    const q = String(p.query || '').trim();
+    const saved = SP.favorites().find((f) => f.name.toLowerCase() === q.toLowerCase()) || SP.favorites().find((f) => f.name.toLowerCase().includes(q.toLowerCase()));
+    const uri = SP.toUri(q) || saved?.uri;
+    if (!uri) throw new Error(`"${q}" is not a Spotify link and doesn't match a saved item. Saved: ${SP.favorites().map((f) => f.name).join(', ') || 'none'}`);
+    if (!(await api.invoke('spotify:state')).running) await api.invoke('spotify:launch');
+    return api.invoke('spotify:playUri', uri);
+  },
+  spotify_set_volume: (p) => api.invoke('spotify:call', 'volume', p.volume),
+  spotify_seek: (p) => api.invoke('spotify:call', 'seek', p.seconds),
+  spotify_saved_list: () => SP.favorites(),
   app_state: () => {
     const s = S.getState();
     return {

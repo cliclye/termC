@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('termc', {
     beforeQuit: on('app:before-quit'),
     menu: on('menu'),
     previewKey: on('preview:key'),
+    spotify: on('spotify:state'),
   },
   pathForFile: (file) => webUtils.getPathForFile(file),
 });

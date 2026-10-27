@@ -58,6 +58,14 @@ Shortcuts also appear in the command palette (`⌘K`) and in Settings → Shortc
 | Dev server preview | `⇧⌘B` |
 | Toggle sidebar | `⌘\` |
 
+## Spotify
+| Action | Shortcut |
+|---|---|
+| Spotify player | `⇧⌘M` |
+| Play / pause | `⌥⌘P` |
+| Next / previous track | `⌥⌘.` / `⌥⌘,` |
+| Play pasted link / save it | `↩` / `⌘↩` in the link box |
+
 ## Inside the palette and pickers
 | Action | Key |
 |---|---|

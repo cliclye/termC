@@ -6,6 +6,7 @@ import * as terminals from './terminals';
 import { applyCurrentTheme } from './theme-registry';
 import { bindingsMap, eventCombo, runCommand } from './commands';
 import { installControl } from './control';
+import { startSpotify } from './spotify';
 import { startEnabledPlugins, broadcast } from './plugin-host';
 import { shellQuote } from './control';
 import App from './components/App';
@@ -42,6 +43,7 @@ async function init() {
   wireEvents();
   installControl();
   startEnabledPlugins();
+  startSpotify();
   createRoot(document.getElementById('root')).render(<App />);
 }
 

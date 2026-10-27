@@ -23,6 +23,7 @@ TermC opens a **home** workspace in your home folder. A few things to try:
 | Git panel | `⌘G` |
 | File browser | `⌘B` |
 | Preview a dev server | run `npm run dev`, then click the toast or press `⇧⌘B` |
+| Play music | `⇧⌘M` opens the Spotify player |
 | Settings | `⌘,` |
 
 ## macOS permissions
@@ -30,6 +31,7 @@ TermC opens a **home** workspace in your home folder. A few things to try:
 | Permission | When it is requested | Why |
 |---|---|---|
 | Screen Recording | First screenshot (`⌃⇧⌘S`) | `screencapture` needs it to capture other apps. Grant it in System Settings → Privacy & Security → Screen Recording, then restart TermC. |
+| Automation → Spotify | First time you use the Spotify player | Lets TermC play, pause and skip in the Spotify app |
 | Notifications | First long-running command that finishes while TermC is in the background | "Command finished" alerts and plugin notifications |
 | Files and folders | When a terminal touches Desktop/Documents/Downloads | Standard macOS protection for any terminal app |
 

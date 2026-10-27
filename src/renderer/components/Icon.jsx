@@ -44,12 +44,24 @@ const P = {
   palette: 'M12 21a9 9 0 1 1 9-9c0 2-1.5 3-3 3h-2a2 2 0 0 0-1.5 3.3c.4.6.2 2.7-2.5 2.7zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01',
   history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2',
   pin: 'M9 4h6l-1 6 3 3H7l3-3zM12 13v8',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+  pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
+  skipBack: 'M18 18.5L8.5 12 18 5.5zM6 5.5v13',
+  skipForward: 'M6 5.5L15.5 12 6 18.5zM18 5.5v13',
+  shuffle: 'M16 4h4v4M4 20L20 4M20 16v4h-4M15 15l5 5M4 4l5 5',
+  repeat: 'M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4',
+  volume: 'M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13',
+  volumeOff: 'M11 5L6 9H3v6h3l5 4zM22 9l-6 6M16 9l6 6',
+  heart: 'M12 20s-7-4.4-9-8.6C1.6 8.3 3.5 5 6.8 5c2 0 3.4 1.1 4.2 2.4h2C13.8 6.1 15.2 5 17.2 5c3.3 0 5.2 3.3 3.8 6.4C19 15.6 12 20 12 20z',
+  disc: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  list: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
 };
 
-export default function Icon({ name, size = 16, className = '', strokeWidth = 1.7, style }) {
+export default function Icon({ name, size = 16, className = '', strokeWidth = 1.7, style, fill = false }) {
   const d = P[name];
   return (
-    <svg className={`icon ${className}`} style={style} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={`icon ${className}`} style={style} width={size} height={size} viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {d && <path d={d} />}
     </svg>
   );

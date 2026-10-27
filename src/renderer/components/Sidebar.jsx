@@ -6,6 +6,7 @@ import { sendPanelMessage } from '../plugin-host';
 import Icon from './Icon';
 import GitPanel from './GitPanel';
 import { useGitStatus } from './StatusBar';
+import { SpotifyPanel } from './Spotify';
 
 const api = window.termc;
 
@@ -35,6 +36,7 @@ export default function Sidebar({ shown }) {
         {view === 'git' && <GitPanel />}
         {view === 'run' && <RunPanel />}
         {view === 'sessions' && <SessionsPanel />}
+        {view === 'spotify' && <SpotifyPanel />}
         {plugin && <PluginPanel panel={plugin} />}
         {view.startsWith('plugin:') && !plugin && <Empty text="This plugin panel is no longer available." />}
       </div>

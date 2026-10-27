@@ -15,6 +15,12 @@ Grant Screen Recording to TermC in System Settings → Privacy & Security → Sc
 **The screenshot shortcut does nothing**
 Another app may own `⌃⇧⌘S` (TermC logs this in `~/.termc/termc.log`). Pick a different shortcut in Settings → Screenshots.
 
+**The Spotify player says TermC needs permission**
+macOS asks once whether TermC may control Spotify. If you clicked Don't Allow, turn it on in System Settings → Privacy & Security → Automation → TermC → Spotify (Settings → Spotify has a button that opens it).
+
+**The Spotify player shows "Spotify isn't installed"**
+TermC controls the Spotify desktop app. Install it from spotify.com; the web player can't be controlled.
+
 **MCP tools say "TermC is not running"**
 The app must be open. Check `claude mcp get termc`. If you moved the app, re-run the `claude mcp add` command from Settings → MCP.
 

@@ -1,7 +1,7 @@
 {
   "name": "termc",
   "productName": "TermC",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A free terminal for AI-assisted development: splits, workspaces, Git, files, dev server preview, plugins and MCP.",
   "main": "dist/main.js",
   "license": "MIT",
@@ -72,7 +72,7 @@
       "identity": null,
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "TermC runs commands you start in its terminals."
+        "NSAppleEventsUsageDescription": "TermC runs commands you start in its terminals and controls Spotify playback from its music player."
       }
     },
     "dmg": {

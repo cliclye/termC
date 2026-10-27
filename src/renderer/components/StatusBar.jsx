@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as S from '../store';
 import { runCommand } from '../commands';
 import Icon from './Icon';
+import { MiniPlayer } from './Spotify';
 
 const api = window.termc;
 
@@ -61,6 +62,7 @@ export default function StatusBar() {
         {info && !info.running && info.lastExit > 0 && <span className="sb-item danger">exit {info.lastExit}</span>}
       </div>
       <div className="sb-right">
+        <MiniPlayer />
         {Object.values(items).map((it) => (
           <button key={it.key} className="sb-item" style={it.color ? { color: it.color } : undefined} title={it.tooltip} onClick={() => it.command && runCommand(it.command)}>
             {it.icon && <Icon name={it.icon} size={12} />}

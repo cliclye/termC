@@ -96,6 +96,19 @@ Click runs the command in a new split, `⌥`-click runs it in the current pane, 
 ### Aliases
 Settings → Aliases. Define `gs → git status` once and it works in zsh, bash and fish. Saving rewrites small per-shell files that every open shell re-reads at its next prompt, so changes apply everywhere without restarting.
 
+## Spotify (`⇧⌘M`)
+<img src="images/spotify.png" width="280" alt="Spotify player" />
+
+Change the music without leaving TermC. It controls the Spotify desktop app on your Mac through macOS scripting: no Spotify login, API key or Premium-only API.
+
+- **Player panel**: album art, track and artist, a seek bar, shuffle, previous, play/pause, next, repeat, and volume with mute.
+- **Mini player** in the status bar: the current song (with a small progress line) plus previous / play / next. Click the song to open the panel.
+- **Your music**: five coding playlists come preloaded (Lofi Beats, Deep Focus, Coding Mode, Brain Food, Peaceful Piano). Paste any Spotify link (playlist, album, song, artist or podcast) and press `↩` to play it, or `⌘↩` to save it under a name. Click to play, drag to reorder, right-click to rename, copy the link or remove. The ♥ next to the song title saves the current song.
+- **Shortcuts**: `⌥⌘P` play/pause, `⌥⌘.` next, `⌥⌘,` previous. The palette (`⌘K`) has volume, shuffle, "Play Link from Clipboard" and a "Spotify: Play …" entry for every saved item.
+- If Spotify isn't open, TermC starts it in the background so you stay where you are.
+- Changes you make in Spotify itself (or with your keyboard's media keys) show up instantly.
+- Turn it off, or hide the status bar player, in Settings → Spotify. Agents can control it too via [MCP](mcp.md).
+
 ## AI
 See [AI features](ai.md): AI commands, providers, session resume and screenshots. For agents controlling TermC, see [MCP](mcp.md).
 

@@ -86,6 +86,13 @@ const TOOLS = [
   ['plugin_set_enabled', 'Enable or disable a plugin.', { id: str('Plugin id'), enabled: bool('Enabled') }, ['id', 'enabled']],
   ['command_list', 'List command palette actions.', {}],
   ['command_execute', 'Run a command palette action by id.', { id: str('Command id from command_list') }, ['id']],
+  // Spotify
+  ['spotify_now_playing', 'What Spotify is playing: track, artist, album, position, volume, shuffle/repeat, and whether Spotify is open.', {}],
+  ['spotify_control', 'Control Spotify playback.', { action: { type: 'string', enum: ['toggle', 'play', 'pause', 'next', 'previous', 'shuffle_on', 'shuffle_off', 'repeat_on', 'repeat_off'], description: 'What to do' } }, ['action']],
+  ['spotify_play', 'Play a Spotify link/URI (playlist, album, track, artist) or one of the user\'s saved items by name. Opens Spotify in the background if needed.', { query: str('open.spotify.com link, spotify: URI, or saved item name such as "Lofi Beats"') }, ['query']],
+  ['spotify_set_volume', 'Set Spotify volume (0–100).', { volume: num('Volume 0–100') }, ['volume']],
+  ['spotify_seek', 'Jump to a position in the current track.', { seconds: num('Position in seconds') }, ['seconds']],
+  ['spotify_saved_list', 'List the user\'s saved Spotify playlists, albums and songs.', {}],
   ['app_state', 'Snapshot of TermC: active workspace, tab, pane, sidebar and dev servers.', {}],
 ];
 

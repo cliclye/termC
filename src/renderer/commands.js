@@ -3,6 +3,7 @@
 import * as S from './store';
 import * as terminals from './terminals';
 import { allThemes } from './theme-registry';
+import * as SP from './spotify';
 
 const api = window.termc;
 
@@ -53,6 +54,14 @@ export const COMMANDS = [
   { id: 'view.run', title: 'Toggle Run Commands', category: 'View', keys: 'mod+shift+r', run: () => S.toggleSidebar('run') },
   { id: 'view.sessions', title: 'AI Sessions', category: 'AI', keys: 'mod+shift+a', run: () => S.toggleSidebar('sessions') },
   { id: 'view.preview', title: 'Toggle Dev Server Preview', category: 'View', keys: 'mod+shift+b', run: () => (S.getState().preview.open ? S.closePreview() : S.openPreview()) },
+  { id: 'view.spotify', title: 'Spotify Player', category: 'Spotify', keys: 'mod+shift+m', run: () => S.toggleSidebar('spotify') },
+  { id: 'spotify.playPause', title: 'Spotify: Play / Pause', category: 'Spotify', keys: 'mod+alt+p', run: () => SP.togglePlay() },
+  { id: 'spotify.next', title: 'Spotify: Next Track', category: 'Spotify', keys: 'mod+alt+.', run: () => SP.next() },
+  { id: 'spotify.previous', title: 'Spotify: Previous Track', category: 'Spotify', keys: 'mod+alt+,', run: () => SP.previous() },
+  { id: 'spotify.volumeUp', title: 'Spotify: Volume Up', category: 'Spotify', run: () => SP.nudgeVolume(10) },
+  { id: 'spotify.volumeDown', title: 'Spotify: Volume Down', category: 'Spotify', run: () => SP.nudgeVolume(-10) },
+  { id: 'spotify.shuffle', title: 'Spotify: Toggle Shuffle', category: 'Spotify', run: () => SP.setShuffle(!SP.getSpotify().status?.shuffling) },
+  { id: 'spotify.playClipboard', title: 'Spotify: Play Link from Clipboard', category: 'Spotify', run: async () => SP.playUri(await navigator.clipboard.readText()).catch(() => {}) },
   { id: 'view.sidebar', title: 'Toggle Sidebar', category: 'View', keys: 'mod+\\', run: () => S.toggleSidebar() },
   { id: 'screenshot.capture', title: 'Capture Screenshot to Terminal', category: 'AI', keys: 'mod+shift+s', run: captureScreenshot },
   { id: 'settings.open', title: 'Settings', category: 'General', keys: 'mod+,', run: () => S.openOverlay({ type: 'settings' }) },
@@ -77,12 +86,19 @@ export function themeCommands() {
   return allThemes().map((t) => ({ id: `theme.${t.id}`, title: `Theme: ${t.name}`, category: 'Themes', run: () => S.saveSettings({ theme: t.id }) }));
 }
 
+// Each saved playlist/album/song becomes "Spotify: Play <name>" in the palette.
+export function spotifyCommands() {
+  const sp = S.getState().settings?.spotify;
+  if (sp?.enabled === false) return [];
+  return (sp?.favorites || []).map((f) => ({ id: `spotify.play:${f.uri}`, title: `Spotify: Play ${f.name}`, category: 'Spotify', run: () => SP.playUri(f.uri, f.name).catch(() => {}) }));
+}
+
 export function pluginCommands() {
   return Object.values(S.getState().plugin.commands);
 }
 
 export function allCommands() {
-  return [...COMMANDS, ...themeCommands(), ...pluginCommands()];
+  return [...COMMANDS, ...themeCommands(), ...spotifyCommands(), ...pluginCommands()];
 }
 
 export function runCommand(id, ...args) {
