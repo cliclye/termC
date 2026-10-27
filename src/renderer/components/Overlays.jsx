@@ -77,7 +77,8 @@ function Palette({ overlay, close }) {
     return [...cmds, ...wss, ...tabs];
   }, []);
 
-  const results = useMemo(() => fuzzyFilter(entries, q, (e) => `${e.category}: ${e.title}`).slice(0, 60), [q, entries]);
+  // Match the title first so highlight positions line up with it; the category still counts for matching.
+  const results = useMemo(() => fuzzyFilter(entries, q, (e) => `${e.title}  ${e.category}`).slice(0, 60), [q, entries]);
   const aiItem = q.trim() ? [{ item: { id: 'ai', kind: 'ai', title: q.trim() } }] : [];
   // When nothing matches well, asking the AI becomes the default action.
   const list = results.length && results[0].score > q.length * 2 ? [...results, ...aiItem] : [...aiItem, ...results];
@@ -141,7 +142,7 @@ function Palette({ overlay, close }) {
             <div key={item.id} className={`palette-item ${i === sel ? 'active' : ''}`} onMouseMove={() => setSel(i)} onClick={() => runEntry(item)}>
               <span className="palette-cat">{item.category}</span>
               <span className="palette-title">
-                <Highlight text={item.title} positions={positions?.map((p) => p - item.category.length - 2).filter((p) => p >= 0)} />
+                <Highlight text={item.title} positions={positions?.filter((p) => p < item.title.length)} />
               </span>
               {item.keys && <kbd>{prettyKeys(item.keys)}</kbd>}
             </div>
@@ -170,8 +171,7 @@ function AiResult({ ai, setAi, ask, close }) {
   const send = (execute) => {
     if (!cmd.trim()) return;
     close();
-    terminals.write(paneId, cmd + (execute ? '\r' : ''));
-    terminals.focus(paneId);
+    S.runCommandIn(paneId, cmd, { execute });
   };
   return (
     <div className="palette ai-panel">
@@ -365,9 +365,14 @@ function NewWorkspace({ close }) {
   const [dir, setDir] = useState(S.activeCwd());
   const [name, setName] = useState('');
   const [color, setColor] = useState(S.WORKSPACE_COLORS[S.getState().workspaces.length % S.WORKSPACE_COLORS.length]);
-  const create = () => {
+  const [error, setError] = useState('');
+  const create = async () => {
+    const home = S.getState().appInfo.homeDir;
+    const path = dir.trim().replace(/^~(?=\/|$)/, home).replace(/\/+$/, '') || '/';
+    const r = await api.invoke('fs:list', path).catch((e) => ({ error: e.message }));
+    if (r.error) return setError(`Can't open that folder: ${r.error.replace(/^\w+: /, '')}`);
     S.setState({ overlay: null });
-    S.createWorkspace({ name: name.trim() || undefined, cwd: dir, color });
+    S.createWorkspace({ name: name.trim() || undefined, cwd: path, color });
   };
   return (
     <div className="dialog wide">
@@ -375,7 +380,7 @@ function NewWorkspace({ close }) {
       <label className="field">
         <span>Project folder</span>
         <div className="row-input">
-          <input value={dir} onChange={(e) => setDir(e.target.value)} spellCheck={false} />
+          <input value={dir} onChange={(e) => { setDir(e.target.value); setError(''); }} onKeyDown={(e) => e.key === 'Enter' && create()} spellCheck={false} />
           <button className="btn" onClick={async () => { const d = await api.invoke('fs:pickDir'); if (d) setDir(d); }}>Browse…</button>
         </div>
       </label>
@@ -383,6 +388,7 @@ function NewWorkspace({ close }) {
         <span>Name</span>
         <input autoFocus value={name} placeholder={dir.split('/').filter(Boolean).pop()} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') close(); }} />
       </label>
+      {error && <div className="danger-text">{error}</div>}
       <div className="field">
         <span>Color</span>
         <div className="swatches">

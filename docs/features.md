@@ -22,6 +22,13 @@
 - `⇧⌘N` (or **+**) creates one: pick a folder, a name and a color. `⌘O` opens a folder straight into a new workspace.
 - Switch with a click or `⌥⌘1–9`; reorder by dragging; right-click to rename, recolor, open a new tab there, or close.
 
+### Safety nets
+- Closing a pane or tab (`⌘W`, `⇧⌘W`, the ✕ button) asks first if a program is still running in it. Quitting asks too (you can turn that off).
+- Commands from the Run panel, the AI command palette or "cd Here" never get typed into a busy program. If the pane is busy, they open in a new split.
+- If the interface crashes it reloads by itself; if it freezes you're offered a reload. Shells keep running and reconnect either way.
+- Layouts are checked on restore: a folder that no longer exists opens in your home folder, and a damaged layout file can't stop TermC from starting.
+- Only one TermC runs at a time; opening it again just focuses the existing window.
+
 ### Session persistence
 On quit (and every 30 seconds) TermC saves every workspace, tab, split layout, each pane's working directory and the last 1,000 lines of scrollback. Next launch, everything is restored and each shell restarts in the right folder. Turn this off in Settings → General → Restore sessions.
 

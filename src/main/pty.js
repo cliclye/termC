@@ -1,5 +1,6 @@
 // Owns every shell process. Parses the shell-integration escape sequences
 // (cwd, command start/finish) and keeps a plain-text tail for reading/MCP.
+const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
@@ -23,7 +24,9 @@ class PtyManager extends EventEmitter {
 
   create({ id, cwd, cols = 80, rows = 24, shell, command }) {
     if (this.ptys.has(id)) return this.info(id);
-    shell = shell || process.env.SHELL || '/bin/zsh';
+    // Fall back gracefully when a restored folder was deleted or the configured shell is wrong.
+    if (!cwd || !isDir(cwd)) cwd = os.homedir();
+    shell = [shell, process.env.SHELL, '/bin/zsh', '/bin/bash'].find((s) => s && isExecutable(s));
     const base = path.basename(shell);
     const env = { ...process.env };
     for (const k of ['ELECTRON_RUN_AS_NODE', 'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SSE_PORT', 'ZDOTDIR', 'TERM_PROGRAM_VERSION', 'NO_COLOR']) delete env[k];
@@ -48,11 +51,16 @@ class PtyManager extends EventEmitter {
     } else {
       args = ['-l'];
     }
-    const p = pty.spawn(shell, args, { name: 'xterm-256color', cols, rows, cwd: cwd || os.homedir(), env });
+    const p = pty.spawn(shell, args, { name: 'xterm-256color', cols: Math.max(2, cols | 0), rows: Math.max(1, rows | 0), cwd, env });
+    let markReady;
     const rec = {
       id,
       pty: p,
-      cwd: cwd || os.homedir(),
+      cwd,
+      // Resolves at the first prompt, so commands aren't typed into a shell that is still starting.
+      ready: new Promise((r) => (markReady = r)),
+      markReady: () => markReady(),
+      awaiting: false,
       tail: '',
       osc: '',
       running: false,
@@ -69,10 +77,15 @@ class PtyManager extends EventEmitter {
     this.ptys.set(id, rec);
     p.onData((data) => this.onData(rec, data));
     p.onExit(({ exitCode }) => {
-      this.ptys.delete(id);
+      clearTimeout(rec.flushTimer);
+      if (rec.pending) this.emit('data', id, rec.pending);
+      if (this.ptys.get(id) === rec) this.ptys.delete(id);
+      rec.waiters.splice(0).forEach((w) => w(null));
       this.emit('exit', id, exitCode);
     });
-    if (command) setTimeout(() => this.write(id, command + '\r'), 350);
+    // Shells without our hooks never report a prompt; don't wait on them forever.
+    setTimeout(() => rec.markReady(), 4000);
+    if (command) rec.ready.then(() => this.ptys.get(id) === rec && p.write(command + '\r'));
     return this.info(id);
   }
 
@@ -91,16 +104,22 @@ class PtyManager extends EventEmitter {
           rec.cwd = cwd;
           this.emit('cwd', rec.id, cwd);
         }
+      } else if (body.startsWith('133;A')) {
+        rec.markReady();
       } else if (body.startsWith('133;C')) {
         rec.running = true;
         this.emit('command', rec.id, { state: 'running' });
       } else if (body.startsWith('133;D')) {
+        const exit = Number(body.split(';')[2] || 0);
         if (rec.running) {
           rec.running = false;
-          rec.lastExit = Number(body.split(';')[2] || 0);
-          this.emit('command', rec.id, { state: 'done', exitCode: rec.lastExit });
-          const ws = rec.waiters.splice(0);
-          ws.forEach((w) => w(rec.lastExit));
+          rec.lastExit = exit;
+          this.emit('command', rec.id, { state: 'done', exitCode: exit });
+        }
+        // Shells without a "command started" hook (macOS bash 3.2) still finish commands we sent.
+        if (rec.awaiting) {
+          rec.awaiting = false;
+          rec.waiters.splice(0).forEach((w) => w(exit));
         }
       }
     }
@@ -169,9 +188,10 @@ class PtyManager extends EventEmitter {
   }
 
   // Run a command and wait for the shell to report completion (OSC 133;D).
-  runAndWait(id, command, timeoutMs = 30000) {
+  async runAndWait(id, command, timeoutMs = 30000) {
     const r = this.ptys.get(id);
-    if (!r) return Promise.reject(new Error(`No terminal ${id}`));
+    if (!r) throw new Error(`No terminal ${id}`);
+    await Promise.race([r.ready, new Promise((res) => setTimeout(res, 5000))]);
     let out = '';
     const listener = (d) => (out += d);
     r.dataListeners.add(listener);
@@ -186,6 +206,7 @@ class PtyManager extends EventEmitter {
         const end = out.lastIndexOf('\x1b]133;D');
         let raw = out;
         if (start >= 0) raw = raw.slice(raw.indexOf('\x07', start) + 1, end > start ? end : undefined);
+        else if (end >= 0) raw = raw.slice(0, end); // no start marker (bash 3.2): stop before the next prompt
         let text = stripAnsi(raw).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         if (start < 0) {
           const lines = text.split('\n');
@@ -198,6 +219,7 @@ class PtyManager extends EventEmitter {
       };
       r.waiters.push((code) => setTimeout(() => finish(code, false), 30));
       setTimeout(() => finish(null, true), timeoutMs);
+      r.awaiting = true;
       // Ctrl-U first so anything half-typed at the prompt doesn't get prepended.
       r.pty.write('\x15' + command + '\r');
     });
@@ -209,6 +231,7 @@ class PtyManager extends EventEmitter {
     const re = new RegExp(pattern);
     let buf = '';
     return new Promise((resolve) => {
+      let t = null;
       const listener = (d) => {
         buf = (buf + stripAnsi(d)).slice(-20000);
         const m = buf.match(re);
@@ -218,7 +241,7 @@ class PtyManager extends EventEmitter {
           resolve({ matched: true, match: m[0] });
         }
       };
-      const t = setTimeout(() => {
+      t = setTimeout(() => {
         r.dataListeners.delete(listener);
         resolve({ matched: false });
       }, timeoutMs);
@@ -227,7 +250,18 @@ class PtyManager extends EventEmitter {
   }
 
   async pollProcesses() {
-    for (const r of this.ptys.values()) {
+    // `ps` can be slow under load; never let polls pile up.
+    if (this.polling) return;
+    this.polling = true;
+    try {
+      await this.pollOnce();
+    } finally {
+      this.polling = false;
+    }
+  }
+
+  async pollOnce() {
+    for (const r of [...this.ptys.values()]) {
       let name;
       try {
         name = r.pty.process;
@@ -250,10 +284,22 @@ class PtyManager extends EventEmitter {
     }
   }
 
-  async cwdOf(id) {
-    const r = this.ptys.get(id);
-    if (!r) return null;
-    return r.cwd;
+}
+
+function isDir(p) {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isExecutable(p) {
+  try {
+    fs.accessSync(p, fs.constants.X_OK);
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
   }
 }
 

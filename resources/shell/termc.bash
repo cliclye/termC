@@ -1,8 +1,9 @@
 # TermC shell integration for bash.
+# Load startup files the way a login shell would (.bash_profile usually sources .bashrc itself).
 if [ -f "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"
 elif [ -f "$HOME/.bash_login" ]; then . "$HOME/.bash_login"
-elif [ -f "$HOME/.profile" ]; then . "$HOME/.profile"; fi
-[ -f "$HOME/.bashrc" ] && [ -z "$_TERMC_RC" ] && { _TERMC_RC=1; . "$HOME/.bashrc"; }
+elif [ -f "$HOME/.profile" ]; then . "$HOME/.profile"
+elif [ -f "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi
 _termc_alias_mtime=""
 _termc_load_aliases() {
   local f="$TERMC_HOME/aliases.bash" m

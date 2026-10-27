@@ -146,7 +146,7 @@ function TerminalPane({ pane, active, visible, multi, zoomed }) {
           { label: 'Find…', keys: '⌘F', run: () => S.setState({ findOpen: pane.id }) },
           ...(pluginItems.length ? [{ type: 'sep' }, ...pluginItems] : []),
           { type: 'sep' },
-          { label: 'Close Pane', keys: '⌘W', run: () => S.closePane(pane.id) },
+          { label: 'Close Pane', keys: '⌘W', run: () => S.closePaneSafely(pane.id) },
         ],
       },
     });
@@ -173,7 +173,7 @@ function TerminalPane({ pane, active, visible, multi, zoomed }) {
           <button title="Split right (⌘D)" onClick={() => S.splitPane(pane.id, 'row')}><Icon name="splitH" size={13} /></button>
           <button title="Split down (⇧⌘D)" onClick={() => S.splitPane(pane.id, 'column')}><Icon name="splitV" size={13} /></button>
           <button title="Zoom (⇧⌘↩)" onClick={() => S.toggleZoom(pane.id)}><Icon name="maximize" size={13} /></button>
-          <button title="Close (⌘W)" onClick={() => S.closePane(pane.id)}><Icon name="x" size={13} /></button>
+          <button title="Close (⌘W)" onClick={() => S.closePaneSafely(pane.id)}><Icon name="x" size={13} /></button>
         </div>
       )}
       {zoomed && <div className="zoom-badge">Zoomed · ⇧⌘↩ to restore</div>}

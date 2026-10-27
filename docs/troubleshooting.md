@@ -13,7 +13,7 @@ Install and log in to Claude Code (`claude`), start Ollama (`ollama serve` + `ol
 Grant Screen Recording to TermC in System Settings → Privacy & Security → Screen Recording, then quit and reopen TermC.
 
 **The screenshot shortcut does nothing**
-Another app may own `⇧⌘S`. Pick a different shortcut in Settings → Screenshots.
+Another app may own `⌃⇧⌘S` (TermC logs this in `~/.termc/termc.log`). Pick a different shortcut in Settings → Screenshots.
 
 **MCP tools say "TermC is not running"**
 The app must be open. Check `claude mcp get termc`. If you moved the app, re-run the `claude mcp add` command from Settings → MCP.
@@ -23,6 +23,12 @@ TermC needs a `localhost`/`127.0.0.1` URL in the output and a port that accepts 
 
 **`npm install` fails building node-pty**
 Install the Xcode command line tools (`xcode-select --install`) and use Node 20+. If the path to the repo contains spaces and the build fails, clone it somewhere without spaces.
+
+**The window froze or went blank**
+TermC detects this and offers to reload the interface (or does it automatically after a crash). Your shells keep running and reconnect. You can also use View → Reload Interface. Details are written to `~/.termc/termc.log`.
+
+**I don't want the "Quit TermC?" question**
+Tick "Don't ask again" in the dialog, or turn off Settings → General → Confirm before quitting.
 
 **Reset everything**
 Quit TermC and delete `~/.termc` (or move it aside). You lose layouts, aliases, plugin data and screenshots.

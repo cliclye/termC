@@ -90,8 +90,16 @@ export function ensure(id, { cwd, command } = {}) {
 }
 
 async function spawn(rec, cwd, command) {
-  const info = await api.pty.create({ id: rec.id, cwd, cols: rec.term.cols, rows: rec.term.rows, command });
-  if (info) setPaneInfo(rec.id, { cwd: info.cwd, process: info.process, pid: info.pid });
+  try {
+    const info = await api.pty.create({ id: rec.id, cwd, cols: rec.term.cols, rows: rec.term.rows, command });
+    if (!info || !registry.has(rec.id)) return;
+    setPaneInfo(rec.id, { cwd: info.cwd, process: info.process, pid: info.pid });
+    // The pane may have been fitted while the shell was starting; make sure the sizes agree.
+    api.pty.resize(rec.id, rec.term.cols, rec.term.rows);
+  } catch (e) {
+    rec.exited = true;
+    rec.term.write(`\r\n\x1b[31mCould not start a shell: ${e.message}\x1b[0m\r\nCheck Settings → General → Shell, then press Enter to retry.\r\n`);
+  }
 }
 
 function restart(id) {

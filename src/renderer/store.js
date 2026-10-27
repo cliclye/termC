@@ -97,7 +97,9 @@ export const setWorkspaceColor = (id, color) => updateWorkspace(id, (w) => ({ ..
 export function deleteWorkspace(id) {
   const ws = state.workspaces.find((w) => w.id === id);
   if (!ws) return;
-  for (const t of ws.tabs) panesOf(t.root).forEach((p) => terminals.dispose(p.id));
+  const closing = ws.tabs.flatMap((t) => panesOf(t.root).map((p) => p.id));
+  closing.forEach((id) => terminals.dispose(id));
+  forgetPanes(closing);
   const rest = state.workspaces.filter((w) => w.id !== id);
   setState({ workspaces: rest, activeWorkspaceId: state.activeWorkspaceId === id ? rest[0]?.id : state.activeWorkspaceId });
   if (!rest.length) createWorkspace({ cwd: ws.cwd });
@@ -122,11 +124,27 @@ export function createTab({ cwd, command, title, workspaceId } = {}) {
   setState({ activeWorkspaceId: ws.id });
   return tab;
 }
+// Drop runtime info for panes that are gone so it isn't saved or offered for resume later.
+function forgetPanes(ids) {
+  if (!ids.length) return;
+  setState((s) => {
+    const paneInfo = { ...s.paneInfo };
+    const resumeOffers = { ...s.resumeOffers };
+    for (const id of ids) {
+      delete paneInfo[id];
+      delete resumeOffers[id];
+    }
+    return { paneInfo, resumeOffers, findOpen: ids.includes(s.findOpen) ? null : s.findOpen };
+  });
+}
+
 export function closeTab(tabId) {
   const ws = state.workspaces.find((w) => w.tabs.some((t) => t.id === tabId));
   if (!ws) return;
   const idx = ws.tabs.findIndex((t) => t.id === tabId);
-  panesOf(ws.tabs[idx].root).forEach((p) => terminals.dispose(p.id));
+  const closing = panesOf(ws.tabs[idx].root).map((p) => p.id);
+  closing.forEach((id) => terminals.dispose(id));
+  forgetPanes(closing);
   const tabs = ws.tabs.filter((t) => t.id !== tabId);
   if (!tabs.length) {
     if (state.workspaces.length > 1) return deleteWorkspace(ws.id);
@@ -182,6 +200,30 @@ export function splitPane(paneId, dir, { cwd, command, before = false } = {}) {
   return pane;
 }
 
+const SHELL_NAMES = new Set(['zsh', 'bash', 'fish', 'sh', '-zsh', '-bash', 'login']);
+export function isBusy(paneId) {
+  const info = state.paneInfo[paneId];
+  return !!info && (info.running || (info.process && !SHELL_NAMES.has(info.process)));
+}
+function busyLabel(ids) {
+  const info = ids.map((id) => state.paneInfo[id]).find((i) => i && (i.running || (i.process && !SHELL_NAMES.has(i.process))));
+  return info?.ai?.name || info?.process || 'A program';
+}
+
+// User-initiated closes ask first when something is running; agents (MCP) close directly.
+export function closePaneSafely(paneId) {
+  const id = paneId || activePaneId();
+  if (!isBusy(id)) return closePane(id);
+  openOverlay({ type: 'confirm', title: `${busyLabel([id])} is still running`, body: 'Closing this pane will stop it.', confirm: 'Close Pane', danger: true, onSubmit: () => closePane(id) });
+}
+export function closeTabSafely(tabId) {
+  const t = tabId ? state.workspaces.flatMap((w) => w.tabs).find((x) => x.id === tabId) : activeTab();
+  if (!t) return;
+  const ids = panesOf(t.root).map((p) => p.id).filter(isBusy);
+  if (!ids.length) return closeTab(t.id);
+  openOverlay({ type: 'confirm', title: `${busyLabel(ids)} is still running`, body: `Closing this tab will stop ${ids.length === 1 ? 'it' : `${ids.length} running programs`}.`, confirm: 'Close Tab', danger: true, onSubmit: () => closeTab(t.id) });
+}
+
 export function closePane(paneId) {
   const id = paneId || activePaneId();
   const hit = findPaneAnywhere(id);
@@ -191,10 +233,7 @@ export function closePane(paneId) {
   if (!root) return closeTab(hit.tab.id);
   const next = panesOf(root)[0].id;
   updateTab(hit.tab.id, (t) => ({ ...t, root, activePaneId: t.activePaneId === id ? next : t.activePaneId, zoomed: t.zoomed === id ? null : t.zoomed }));
-  setState((s) => {
-    const { [id]: _, ...rest } = s.resumeOffers;
-    return { resumeOffers: rest };
-  });
+  forgetPanes([id]);
   if (hit.tab.id === activeTab()?.id) requestAnimationFrame(() => terminals.focus(activePaneId()));
 }
 
@@ -260,6 +299,20 @@ export function setPaneInfo(id, patch) {
   setState((s) => ({ paneInfo: { ...s.paneInfo, [id]: { ...s.paneInfo[id], ...patch } } }));
 }
 
+// Run a command in a pane, or in a new split next to it if that pane is busy (e.g. Claude Code is running).
+export function runCommandIn(paneId, command, { execute = true } = {}) {
+  const id = paneId || activePaneId();
+  const info = state.paneInfo[id];
+  if (!findPaneAnywhere(id) || (info?.running && execute)) {
+    const pane = findPaneAnywhere(id) ? splitPane(id, 'row', { command: execute ? command : undefined }) : createTab({ command: execute ? command : undefined });
+    if (pane && findPaneAnywhere(id)) toast(`${info?.ai?.name || info?.process || 'A program'} is running there, so this opened in a new split.`, { title: 'Pane busy' });
+    return pane?.id || pane?.activePaneId;
+  }
+  terminals.write(id, (execute ? '\x15' : '') + command + (execute ? '\r' : ''));
+  requestAnimationFrame(() => terminals.focus(id));
+  return id;
+}
+
 // ---- UI ----
 export const openOverlay = (overlay) => setState({ overlay });
 export const closeOverlay = () => {
@@ -285,6 +338,49 @@ export async function saveSettings(patch) {
 }
 
 // ---- persistence ----
+// Accept only well-formed saved layouts; anything else is dropped rather than crashing the UI.
+export function sanitizeWorkspaces(list) {
+  const seen = new Set();
+  const node = (n) => {
+    if (!n || typeof n !== 'object') return null;
+    if (n.type === 'pane') {
+      if (typeof n.id !== 'string' || seen.has(n.id)) return null;
+      seen.add(n.id);
+      return { type: 'pane', id: n.id, cwd: typeof n.cwd === 'string' ? n.cwd : undefined };
+    }
+    if (n.type === 'split') {
+      const a = node(n.a);
+      const b = node(n.b);
+      if (!a || !b) return a || b;
+      const ratio = Number(n.ratio);
+      return { type: 'split', id: typeof n.id === 'string' ? n.id : rid('s'), dir: n.dir === 'column' ? 'column' : 'row', ratio: ratio > 0.05 && ratio < 0.95 ? ratio : 0.5, a, b };
+    }
+    return null;
+  };
+  return (Array.isArray(list) ? list : [])
+    .map((w) => {
+      if (!w || typeof w !== 'object') return null;
+      const tabs = (Array.isArray(w.tabs) ? w.tabs : [])
+        .map((t) => {
+          const root = t && node(t.root);
+          if (!root) return null;
+          const ids = panesOf(root).map((p) => p.id);
+          return { id: typeof t.id === 'string' ? t.id : rid('t'), title: typeof t.title === 'string' ? t.title : '', root, activePaneId: ids.includes(t.activePaneId) ? t.activePaneId : ids[0], zoomed: ids.includes(t.zoomed) ? t.zoomed : null };
+        })
+        .filter(Boolean);
+      if (!tabs.length) return null;
+      return {
+        id: typeof w.id === 'string' ? w.id : rid('w'),
+        name: typeof w.name === 'string' && w.name ? w.name : 'workspace',
+        color: typeof w.color === 'string' ? w.color : WORKSPACE_COLORS[0],
+        cwd: typeof w.cwd === 'string' ? w.cwd : undefined,
+        tabs,
+        activeTabId: tabs.some((t) => t.id === w.activeTabId) ? w.activeTabId : tabs[0].id,
+      };
+    })
+    .filter(Boolean);
+}
+
 let saveTimer = null;
 function snapshot() {
   const strip = (n) => (n.type === 'pane' ? { type: 'pane', id: n.id, cwd: state.paneInfo[n.id]?.cwd || n.cwd } : { ...n, a: strip(n.a), b: strip(n.b) });

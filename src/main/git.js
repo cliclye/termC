@@ -2,9 +2,16 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { run } = require('./util');
 
-const git = (cwd, args, opts) => run('git', args, { cwd, ...opts });
+// Never block on an HTTPS credential prompt: there is no terminal to answer it. (ssh already
+// fails fast without a controlling terminal.) Optional locks off so polling never blocks your own git.
+const git = (cwd, args, opts) => run('git', args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' }, ...opts });
+
+// Several panels poll status at once; share one result per repo for a short time.
+const statusCache = new Map();
+const invalidate = () => statusCache.clear();
 
 async function must(cwd, args) {
+  if (!cwd) throw new Error('Not a git repository');
   const r = await git(cwd, args);
   if (!r.ok) throw new Error((r.stderr || r.error || 'git failed').trim());
   return r.stdout;
@@ -16,7 +23,21 @@ async function root(cwd) {
   return r.ok ? r.stdout.trim() : null;
 }
 
-async function status(cwd) {
+function status(cwd) {
+  const hit = statusCache.get(cwd);
+  if (hit && Date.now() - hit.at < 1500) return hit.promise;
+  const promise = statusUncached(cwd).catch((e) => ({ repo: false, error: e.message }));
+  statusCache.set(cwd, { at: Date.now(), promise });
+  if (statusCache.size > 50) statusCache.delete(statusCache.keys().next().value);
+  return promise;
+}
+
+async function init(cwd) {
+  invalidate();
+  return must(cwd, ['init']);
+}
+
+async function statusUncached(cwd) {
   const top = await root(cwd);
   if (!top) return { repo: false };
   const out = await must(top, ['status', '--porcelain=v1', '-b', '-z', '--untracked-files=all']);
@@ -64,11 +85,13 @@ async function diff(cwd, file, staged, untracked) {
 }
 
 async function stage(cwd, files) {
+  invalidate();
   const top = await root(cwd);
   return must(top, ['add', '-A', '--', ...(files?.length ? files : ['.'])]);
 }
 
 async function unstage(cwd, files) {
+  invalidate();
   const top = await root(cwd);
   const head = await git(top, ['rev-parse', '--verify', 'HEAD']);
   if (!head.ok) return must(top, ['rm', '--cached', '-r', '-q', '--', ...(files?.length ? files : ['.'])]);
@@ -76,12 +99,14 @@ async function unstage(cwd, files) {
 }
 
 async function discard(cwd, file, untracked) {
+  invalidate();
   const top = await root(cwd);
   if (untracked) return must(top, ['clean', '-f', '--', file]);
   return must(top, ['checkout', '--', file]);
 }
 
 async function commit(cwd, message, { amend = false, all = false } = {}) {
+  invalidate();
   const top = await root(cwd);
   if (all) await must(top, ['add', '-A']);
   const args = ['commit', '-m', message];
@@ -90,6 +115,7 @@ async function commit(cwd, message, { amend = false, all = false } = {}) {
 }
 
 async function remoteOp(cwd, op) {
+  invalidate();
   const top = await root(cwd);
   const args = op === 'push' ? ['push'] : op === 'pull' ? ['pull', '--ff-only'] : ['fetch', '--all', '--prune'];
   const r = await git(top, args, { timeout: 120000 });
@@ -97,7 +123,12 @@ async function remoteOp(cwd, op) {
     const branch = (await must(top, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim();
     return must(top, ['push', '-u', 'origin', branch]);
   }
-  if (!r.ok) throw new Error(r.stderr.trim() || r.error);
+  if (!r.ok) {
+    const msg = r.stderr.trim() || r.error || '';
+    if (/terminal prompts disabled|could not read Username|Permission denied \(publickey/.test(msg))
+      throw new Error(`${op} needs credentials. Run "git ${op}" once in a terminal to sign in, then try again.`);
+    throw new Error(msg);
+  }
   return (r.stdout + r.stderr).trim();
 }
 
@@ -135,6 +166,7 @@ async function branches(cwd) {
 }
 
 async function checkout(cwd, branch, { create = false } = {}) {
+  invalidate();
   const top = await root(cwd);
   if (create) return must(top, ['checkout', '-b', branch]);
   const remote = branch.match(/^([^/]+)\/(.+)$/);
@@ -165,7 +197,9 @@ async function worktrees(cwd) {
 }
 
 async function worktreeAdd(cwd, { branch, path: wtPath, newBranch = true, base }) {
+  invalidate();
   const top = await root(cwd);
+  if (!top) throw new Error('Not a git repository');
   const target = wtPath || path.join(path.dirname(top), `${path.basename(top)}-${branch.replace(/[^\w.-]+/g, '-')}`);
   const exists = await git(top, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]);
   const args = ['worktree', 'add'];
@@ -176,8 +210,9 @@ async function worktreeAdd(cwd, { branch, path: wtPath, newBranch = true, base }
 }
 
 async function worktreeRemove(cwd, wtPath, force = false) {
+  invalidate();
   const top = await root(cwd);
   return must(top, ['worktree', 'remove', ...(force ? ['--force'] : []), wtPath]);
 }
 
-module.exports = { root, status, diff, stage, unstage, discard, commit, remoteOp, log, show, branches, checkout, worktrees, worktreeAdd, worktreeRemove };
+module.exports = { root, init, status, diff, stage, unstage, discard, commit, remoteOp, log, show, branches, checkout, worktrees, worktreeAdd, worktreeRemove };

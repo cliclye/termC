@@ -4,6 +4,11 @@ const { TERMC_HOME, readJSON, writeJSON } = require('./util');
 
 const FILE = path.join(TERMC_HOME, 'settings.json');
 const SECRET_KEYS = ['anthropicKey', 'openaiKey'];
+const VERSION = 2;
+// ⇧⌘S is "Save As" in most Mac apps, so the system-wide shortcut defaults to ⌃⇧⌘S instead.
+// (Inside TermC, ⇧⌘S still takes a screenshot.)
+const OLD_SHOT = 'CommandOrControl+Shift+S';
+const DEFAULT_SHOT = 'Control+Shift+CommandOrControl+S';
 
 const DEFAULTS = {
   theme: 'termc-dark',
@@ -16,6 +21,7 @@ const DEFAULTS = {
   optionAsMeta: false,
   shell: process.env.SHELL || '/bin/zsh',
   restoreSessions: true,
+  confirmQuit: true,
   copyOnSelect: false,
   ai: {
     provider: 'auto',
@@ -26,7 +32,8 @@ const DEFAULTS = {
     anthropicKey: '',
     openaiKey: '',
   },
-  screenshotShortcut: 'CommandOrControl+Shift+S',
+  screenshotShortcut: DEFAULT_SHOT,
+  settingsVersion: VERSION,
   enabledPlugins: {},
 };
 
@@ -52,11 +59,27 @@ function load() {
   const raw = readJSON(FILE, {});
   cache = { ...DEFAULTS, ...raw, ai: { ...DEFAULTS.ai, ...(raw.ai || {}) } };
   for (const k of SECRET_KEYS) cache.ai[k] = decrypt(cache.ai[k]);
+  if (!(raw.settingsVersion >= 2)) {
+    if (cache.screenshotShortcut === OLD_SHOT) cache.screenshotShortcut = DEFAULT_SHOT;
+    cache.settingsVersion = VERSION;
+  }
+  // Keep numeric settings in a range xterm accepts even if the file was hand-edited.
+  cache.fontSize = clamp(cache.fontSize, 8, 32, 13);
+  cache.scrollback = clamp(cache.scrollback, 500, 200000, 10000);
+  cache.lineHeight = clamp(cache.lineHeight, 1, 2, 1.25);
   return cache;
+}
+
+function clamp(v, lo, hi, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback;
 }
 
 function save(next) {
   cache = { ...load(), ...next, ai: { ...load().ai, ...(next.ai || {}) } };
+  cache.fontSize = clamp(cache.fontSize, 8, 32, 13);
+  cache.scrollback = clamp(cache.scrollback, 500, 200000, 10000);
+  cache.lineHeight = clamp(cache.lineHeight, 1, 2, 1.25);
   const onDisk = { ...cache, ai: { ...cache.ai } };
   for (const k of SECRET_KEYS) onDisk.ai[k] = encrypt(cache.ai[k]);
   writeJSON(FILE, onDisk);

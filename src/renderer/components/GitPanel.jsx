@@ -44,9 +44,15 @@ export default function GitPanel() {
     return (
       <div className="panel">
         <PanelHeader title="Git" />
-        <Empty text="This folder is not a Git repository.">
-          <button className="btn" onClick={() => api.invoke('pty:runAndWait', S.activePaneId(), 'git init', 10000).then(reload)}>Initialize repository</button>
-        </Empty>
+        {status.error ? (
+          <Empty text={status.error}>
+            <button className="btn" onClick={reload}>Try again</button>
+          </Empty>
+        ) : (
+          <Empty text="This folder is not a Git repository.">
+            <button className="btn" onClick={async () => { await act(() => api.invoke('git:init', cwd), 'Repository initialized'); reload(); }}>Initialize repository</button>
+          </Empty>
+        )}
       </div>
     );
   if (!status) return <div className="panel"><PanelHeader title="Git" /></div>;

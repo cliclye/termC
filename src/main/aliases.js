@@ -5,7 +5,7 @@ const path = require('node:path');
 const { TERMC_HOME, readJSON, writeJSON } = require('./util');
 
 const FILE = path.join(TERMC_HOME, 'aliases.json');
-const NAME_RE = /^[A-Za-z0-9_.:+@-]+$/;
+const NAME_RE = /^[A-Za-z0-9_][A-Za-z0-9_.:-]*$/;
 
 const DEFAULT_ALIASES = [
   { name: 'gs', command: 'git status' },
@@ -18,7 +18,7 @@ const sq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
 function list() {
   const data = readJSON(FILE, null);
-  if (!data) {
+  if (!Array.isArray(data)) {
     writeJSON(FILE, DEFAULT_ALIASES);
     render(DEFAULT_ALIASES);
     return DEFAULT_ALIASES;

@@ -75,7 +75,9 @@ function FilesPanel() {
   const [tick, setTick] = useState(0);
   const [expanded, setExpanded] = useState({});
   const [selected, setSelected] = useState(null);
-  const git = useGitStatus(root, [tick]);
+  // Re-list folders after commands finish or the window regains focus, so the tree stays current.
+  const fsVersion = S.useStore((s) => s.fsVersion || 0);
+  const git = useGitStatus(root, [tick, fsVersion]);
 
   useEffect(() => {
     api.invoke('git:root', cwd).then((r) => setRoot(r || cwd));
@@ -119,7 +121,7 @@ function FilesPanel() {
         <button className="icon-btn" title="Refresh" onClick={() => setTick(tick + 1)}><Icon name="refresh" size={14} /></button>
       </PanelHeader>
       <div className="panel-body tree" key={tick}>
-        <DirChildren dir={root} depth={0} hidden={hidden} expanded={expanded} setExpanded={setExpanded} selected={selected} setSelected={setSelected} statusMap={statusMap} />
+        <DirChildren dir={root} depth={0} version={fsVersion} hidden={hidden} expanded={expanded} setExpanded={setExpanded} selected={selected} setSelected={setSelected} statusMap={statusMap} />
       </div>
       <div className="panel-hint">Drag files into a terminal · double-click to insert</div>
     </div>
@@ -130,11 +132,11 @@ function DirChildren({ dir, depth, ...rest }) {
   const [entries, setEntries] = useState(null);
   useEffect(() => {
     let alive = true;
-    api.invoke('fs:list', dir, rest.hidden).then((r) => alive && setEntries(r.entries));
+    api.invoke('fs:list', dir, rest.hidden).then((r) => alive && setEntries(r.entries)).catch(() => alive && setEntries([]));
     return () => {
       alive = false;
     };
-  }, [dir, rest.hidden]);
+  }, [dir, rest.hidden, rest.version]);
   if (!entries) return null;
   if (!entries.length && depth === 0) return <Empty text="Empty folder" />;
   return (
@@ -144,7 +146,7 @@ function DirChildren({ dir, depth, ...rest }) {
   );
 }
 
-function TreeItem({ entry, depth, expanded, setExpanded, selected, setSelected, statusMap, hidden }) {
+function TreeItem({ entry, depth, expanded, setExpanded, selected, setSelected, statusMap, hidden, version }) {
   const open = !!expanded[entry.path];
   const status = statusMap[entry.path];
   const insert = () => terminals.paste(S.activePaneId(), shellQuote(entry.path) + ' ');
@@ -160,7 +162,7 @@ function TreeItem({ entry, depth, expanded, setExpanded, selected, setSelected, 
           { label: 'Copy Path', run: () => navigator.clipboard.writeText(entry.path) },
           ...(entry.isDir
             ? [
-                { label: 'cd Here', run: () => terminals.write(S.activePaneId(), `cd ${shellQuote(entry.path)}\r`) },
+                { label: 'cd Here', run: () => S.runCommandIn(S.activePaneId(), `cd ${shellQuote(entry.path)}`) },
                 { label: 'Open in New Tab', run: () => S.createTab({ cwd: entry.path }) },
                 { label: 'Open in Split', run: () => S.splitPane(null, 'row', { cwd: entry.path }) },
               ]
@@ -195,7 +197,7 @@ function TreeItem({ entry, depth, expanded, setExpanded, selected, setSelected, 
         <span className="tree-name">{entry.name}</span>
         {status && <span className={`tree-status ${status}`}>{status === 'new' ? 'U' : status === 'del' ? 'D' : entry.isDir ? '•' : 'M'}</span>}
       </div>
-      {entry.isDir && open && <DirChildren dir={entry.path} depth={depth + 1} hidden={hidden} expanded={expanded} setExpanded={setExpanded} selected={selected} setSelected={setSelected} statusMap={statusMap} />}
+      {entry.isDir && open && <DirChildren dir={entry.path} depth={depth + 1} version={version} hidden={hidden} expanded={expanded} setExpanded={setExpanded} selected={selected} setSelected={setSelected} statusMap={statusMap} />}
     </>
   );
 }
@@ -210,7 +212,7 @@ function RunPanel() {
     load();
   }, [cwd]);
   const run = (g, item, where) => {
-    if (where === 'here') terminals.write(S.activePaneId(), (cwdDiffers(g.dir) ? `cd ${shellQuote(g.dir)} && ` : '') + item.command + '\r');
+    if (where === 'here') S.runCommandIn(S.activePaneId(), (cwdDiffers(g.dir) ? `cd ${shellQuote(g.dir)} && ` : '') + item.command);
     else if (where === 'tab') S.createTab({ cwd: g.dir, command: item.command, title: item.name });
     else S.splitPane(null, 'row', { cwd: g.dir, command: item.command });
   };

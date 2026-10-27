@@ -107,6 +107,7 @@ function General() {
       <Row label="Option key as Meta" hint="Needed for Alt-shortcuts in emacs, tmux and some TUIs."><Toggle value={s.optionAsMeta} onChange={(v) => set({ optionAsMeta: v })} /></Row>
       <Row label="Copy on select"><Toggle value={s.copyOnSelect} onChange={(v) => set({ copyOnSelect: v })} /></Row>
       <Row label="Restore sessions" hint="Reopen workspaces, layouts and terminal scrollback after restart."><Toggle value={s.restoreSessions} onChange={(v) => set({ restoreSessions: v })} /></Row>
+      <Row label="Confirm before quitting" hint="Ask first when quitting would stop running programs."><Toggle value={s.confirmQuit !== false} onChange={(v) => set({ confirmQuit: v })} /></Row>
     </>
   );
 }

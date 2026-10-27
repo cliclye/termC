@@ -19,10 +19,11 @@ async function init() {
   terminals.setRestoredBuffers(saved.buffers);
 
   const st = saved.state;
-  if (st?.workspaces?.length && settings.restoreSessions) {
+  const restored = settings.restoreSessions ? S.sanitizeWorkspaces(st?.workspaces) : [];
+  if (restored.length) {
     S.setState({
-      workspaces: st.workspaces,
-      activeWorkspaceId: st.activeWorkspaceId,
+      workspaces: restored,
+      activeWorkspaceId: restored.some((w) => w.id === st.activeWorkspaceId) ? st.activeWorkspaceId : restored[0].id,
       sidebar: { ...S.getState().sidebar, ...st.sidebar },
       preview: { ...S.getState().preview, ...st.preview, open: false },
     });
@@ -55,6 +56,7 @@ function wireEvents() {
     if (info.state === 'running') S.setPaneInfo(id, { running: true, startedAt: Date.now() });
     else {
       S.setPaneInfo(id, { running: false, lastExit: info.exitCode });
+      S.setState((s) => ({ fsVersion: (s.fsVersion || 0) + 1 })); // files may have changed
       const took = Date.now() - (prev.startedAt || Date.now());
       if (took > 15000 && !document.hasFocus()) api.invoke('app:notify', { title: info.exitCode ? 'Command failed' : 'Command finished', body: `${prev.cwd || ''} · exit ${info.exitCode} · ${Math.round(took / 1000)}s` });
       broadcast('commandFinished', { paneId: id, exitCode: info.exitCode, durationMs: took });
@@ -87,7 +89,17 @@ function wireEvents() {
       api.invoke('app:quitReady');
     }
   });
-  api.on.menu((id) => runCommand(id));
+  api.on.previewKey((input) => {
+    const combo = eventCombo(input);
+    if (combo === 'mod+w') return S.closePreview();
+    if (combo === 'mod+r') return window.dispatchEvent(new Event('termc-preview-reload'));
+    const id = bindingsMap().get(combo);
+    if (id && !S.getState().overlay) Promise.resolve(runCommand(id)).catch((err) => S.toast(err.message, { kind: 'error' }));
+  });
+  api.on.menu((id) => {
+    if (id === 'edit.selectAll') return selectAll();
+    Promise.resolve(runCommand(id)).catch((err) => S.toast(err.message, { kind: 'error' }));
+  });
   setInterval(() => S.saveAll(), 30000);
 
   // App shortcuts take precedence over the terminal (capture phase).
@@ -110,10 +122,22 @@ function wireEvents() {
   );
 
   window.addEventListener('focus', () => {
+    S.setState((s) => ({ fsVersion: (s.fsVersion || 0) + 1 }));
     const id = S.activePaneId();
     if (id) api.setActivePane({ id, cwd: S.paneCwd(id) });
   });
 }
+
+// ⌘A selects the terminal's scrollback when a terminal has focus, otherwise the text field's contents.
+function selectAll() {
+  const el = document.activeElement;
+  if (el?.closest?.('.xterm')) return terminals.get(S.activePaneId())?.term.selectAll();
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return el.select();
+  document.execCommand('selectAll');
+}
+
+window.addEventListener('error', (e) => api.log('error', e.message, e.error?.stack || ''));
+window.addEventListener('unhandledrejection', (e) => api.log('unhandledrejection', e.reason?.stack || e.reason));
 
 init().catch((e) => {
   document.getElementById('root').textContent = `Failed to start: ${e.stack || e}`;

@@ -12,6 +12,7 @@ import Overlays from './Overlays';
 import Toasts from './Toasts';
 import ContextMenu from './ContextMenu';
 import { usePresence } from '../motion';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -35,23 +36,43 @@ export default function App() {
 
   return (
     <div className="app">
-      <TabBar />
-      <Rail />
-      {sidebarMounted && <Sidebar shown={sidebarShown} />}
+      <ErrorBoundary name="Tab bar">
+        <TabBar />
+      </ErrorBoundary>
+      <ErrorBoundary name="Sidebar rail">
+        <Rail />
+      </ErrorBoundary>
+      {sidebarMounted && (
+        <ErrorBoundary name="Sidebar">
+          <Sidebar shown={sidebarShown} />
+        </ErrorBoundary>
+      )}
       <main className="main">
         <div className="content">
           <div className="workspaces">
             {workspaces.map((w) => (
-              <Workspace key={w.id} workspace={w} visible={w.id === ws?.id} />
+              <ErrorBoundary key={w.id} name={`Workspace ${w.name}`}>
+                <Workspace workspace={w} visible={w.id === ws?.id} />
+              </ErrorBoundary>
             ))}
           </div>
-          {previewMounted && <Preview shown={previewShown} />}
+          {previewMounted && (
+            <ErrorBoundary name="Preview">
+              <Preview shown={previewShown} />
+            </ErrorBoundary>
+          )}
         </div>
       </main>
-      <StatusBar />
-      <Overlays />
-      <Toasts />
-      <ContextMenu />
+      <ErrorBoundary name="Status bar">
+        <StatusBar />
+      </ErrorBoundary>
+      <ErrorBoundary name="Dialog">
+        <Overlays />
+      </ErrorBoundary>
+      <ErrorBoundary silent>
+        <Toasts />
+        <ContextMenu />
+      </ErrorBoundary>
     </div>
   );
 }

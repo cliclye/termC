@@ -29,7 +29,7 @@ TermC opens a **home** workspace in your home folder. A few things to try:
 
 | Permission | When it is requested | Why |
 |---|---|---|
-| Screen Recording | First screenshot with `⇧⌘S` | `screencapture` needs it to capture other apps. Grant it in System Settings → Privacy & Security → Screen Recording, then restart TermC. |
+| Screen Recording | First screenshot (`⌃⇧⌘S`) | `screencapture` needs it to capture other apps. Grant it in System Settings → Privacy & Security → Screen Recording, then restart TermC. |
 | Notifications | First long-running command that finishes while TermC is in the background | "Command finished" alerts and plugin notifications |
 | Files and folders | When a terminal touches Desktop/Documents/Downloads | Standard macOS protection for any terminal app |
 
@@ -71,3 +71,4 @@ Everything is in `~/.termc` (set `TERMC_HOME` to use another folder, handy for t
 | `plugins/`, `plugin-data/` | Installed plugins and their storage |
 | `screenshots/<project>/` | Screenshot history |
 | `control.json` | Port and token for the MCP bridge (recreated each launch, mode 600) |
+| `termc.log` | Errors from the app, useful when reporting a bug |

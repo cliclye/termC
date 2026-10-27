@@ -1,7 +1,7 @@
 {
   "name": "termc",
   "productName": "TermC",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A free terminal for AI-assisted development: splits, workspaces, Git, files, dev server preview, plugins and MCP.",
   "main": "dist/main.js",
   "license": "MIT",

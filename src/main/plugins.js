@@ -11,8 +11,10 @@ const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 function readManifest(dir) {
   const m = readJSON(path.join(dir, 'manifest.json'), null);
-  if (!m || !ID_RE.test(m.id || '')) return null;
-  return { permissions: [], ...m };
+  if (!m || typeof m !== 'object') return null;
+  const id = path.basename(dir);
+  if (!ID_RE.test(id)) return null;
+  return { name: id, version: '0.0.0', description: '', ...m, id, permissions: Array.isArray(m.permissions) ? m.permissions : [] };
 }
 
 function installed() {

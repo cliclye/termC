@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, Notification, dialog, globalShortcut, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Notification, dialog, globalShortcut, shell, nativeTheme, screen } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
@@ -18,6 +18,32 @@ const { PtyManager } = require('./pty');
 const { DevServers } = require('./devservers');
 
 app.setName('TermC');
+
+// A custom TERMC_HOME (used for testing) gets its own browser profile, so it can run beside the normal app.
+if (process.env.TERMC_HOME) app.setPath('userData', path.join(TERMC_HOME, 'chromium'));
+
+// One TermC per data folder: a second copy would fight over the saved layout and the MCP endpoint.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.exit(0);
+app.on('second-instance', () => {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+});
+
+// Log instead of showing Electron's crash dialog; the app keeps running.
+const LOG_FILE = path.join(TERMC_HOME, 'termc.log');
+function log(...parts) {
+  try {
+    const line = `[${new Date().toISOString()}] ${parts.map((p) => (p instanceof Error ? p.stack : typeof p === 'string' ? p : JSON.stringify(p))).join(' ')}\n`;
+    if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > 2e6) fs.renameSync(LOG_FILE, LOG_FILE + '.1');
+    fs.appendFileSync(LOG_FILE, line);
+  } catch {}
+}
+process.on('uncaughtException', (e) => log('uncaughtException', e));
+process.on('unhandledRejection', (e) => log('unhandledRejection', e));
+
 const STATE_FILE = path.join(TERMC_HOME, 'state.json');
 const BUFFERS = path.join(TERMC_HOME, 'buffers');
 const MCP_SCRIPT = unpacked(path.join(__dirname, '..', 'mcp', 'termc-mcp.js'));
@@ -57,8 +83,17 @@ function loadLoginPath() {
   });
 }
 
+// Saved bounds can point at a monitor that is no longer attached.
+function savedBounds() {
+  const b = readJSON(path.join(TERMC_HOME, 'window.json'), null);
+  const fallback = { width: 1320, height: 840 };
+  if (!b || !(b.width > 0) || !(b.height > 0)) return fallback;
+  const visible = screen.getAllDisplays().some(({ workArea: w }) => b.x < w.x + w.width - 80 && b.x + b.width > w.x + 80 && b.y >= w.y - 10 && b.y < w.y + w.height - 80);
+  return visible ? b : { width: Math.min(b.width, 1600), height: Math.min(b.height, 1000) };
+}
+
 function createWindow() {
-  const bounds = readJSON(path.join(TERMC_HOME, 'window.json'), { width: 1320, height: 840 });
+  const bounds = savedBounds();
   win = new BrowserWindow({
     ...bounds,
     minWidth: 720,
@@ -94,6 +129,28 @@ function createWindow() {
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
+  // If the UI process dies, bring it back; shells keep running in the main process.
+  win.webContents.on('render-process-gone', (_e, details) => {
+    log('renderer gone', details);
+    if (!quitting && details.reason !== 'clean-exit') setTimeout(() => !win.isDestroyed() && win.reload(), 500);
+  });
+  // A frozen UI (not crashed) gets an offer to reload; shells and their output survive.
+  let asking = false;
+  win.on('unresponsive', async () => {
+    if (asking || quitting) return;
+    asking = true;
+    log('window unresponsive');
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'warning',
+      message: "TermC's window isn't responding",
+      detail: 'Your shells are still running. Reloading the interface reconnects to them.',
+      buttons: ['Reload Interface', 'Keep Waiting'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    asking = false;
+    if (response === 0 && !win.isDestroyed()) win.webContents.forcefullyCrashRenderer(), setTimeout(() => !win.isDestroyed() && win.reload(), 300);
+  });
 }
 
 function debounce(fn, ms) {
@@ -105,15 +162,35 @@ function debounce(fn, ms) {
 }
 
 // Give the renderer a moment to persist layout + scrollback before exiting.
-function requestQuit() {
-  if (quitting) return;
+let confirmingQuit = false;
+async function requestQuit() {
+  if (quitting || confirmingQuit) return;
   if (!win || win.isDestroyed()) {
     quitting = true;
     return app.quit();
   }
+  // Quitting ends every shell; say so when programs (dev servers, AI agents, builds) are still running.
+  const busy = ptys.list().filter((p) => p.running || (p.process && !SHELLS.has(p.process)));
+  if (busy.length && settings.load().confirmQuit !== false) {
+    confirmingQuit = true;
+    const names = [...new Set(busy.map((p) => p.ai?.name || p.process))].slice(0, 4).join(', ');
+    const { response, checkboxChecked } = await dialog.showMessageBox(win, {
+      type: 'question',
+      message: `Quit TermC? ${busy.length} running ${busy.length === 1 ? 'program' : 'programs'} will be stopped.`,
+      detail: `Still running: ${names}. Your layout and scrollback are saved either way.`,
+      buttons: ['Quit', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+      checkboxLabel: "Don't ask again",
+    });
+    confirmingQuit = false;
+    if (response !== 0) return;
+    if (checkboxChecked) settings.save({ confirmQuit: false });
+  }
   send('app:before-quit');
   setTimeout(finishQuit, 2000);
 }
+const SHELLS = new Set(['zsh', 'bash', 'fish', 'sh', '-zsh', '-bash', 'login']);
 
 function finishQuit() {
   if (quitting) return;
@@ -128,15 +205,23 @@ function registerScreenshotShortcut() {
   const acc = settings.load().screenshotShortcut;
   if (!acc) return;
   try {
-    globalShortcut.register(acc, () => takeScreenshot());
+    if (!globalShortcut.register(acc, () => takeScreenshot())) log(`screenshot shortcut ${acc} is taken by another app`);
   } catch (e) {
-    console.error('Could not register screenshot shortcut', e);
+    log('Could not register screenshot shortcut', e);
   }
 }
 
+let capturing = false;
 async function takeScreenshot() {
-  const cwd = activePane.cwd || (activePane.id && ptys.info(activePane.id)?.cwd);
-  const shot = await screenshots.capture(cwd);
+  if (capturing) return null; // a selection is already on screen
+  capturing = true;
+  let shot;
+  try {
+    const cwd = activePane.cwd || (activePane.id && ptys.info(activePane.id)?.cwd);
+    shot = await screenshots.capture(cwd);
+  } finally {
+    capturing = false;
+  }
   if (!shot) return null;
   if (win) {
     if (win.isMinimized()) win.restore();
@@ -170,13 +255,23 @@ function buildMenu() {
       : []),
     {
       label: 'Edit',
-      submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        // Terminals need their own select-all; the renderer decides what has focus.
+        { label: 'Select All', accelerator: 'CmdOrCtrl+A', click: () => send('menu', 'edit.selectAll') },
+      ],
     },
     {
       label: 'View',
       submenu: [
         { label: 'Command Palette', click: () => send('menu', 'palette.open') },
         { type: 'separator' },
+        { label: 'Reload Interface', click: () => win && !win.isDestroyed() && win.reload() },
         { role: 'toggleDevTools' },
         { role: 'togglefullscreen' },
       ],
@@ -187,7 +282,15 @@ function buildMenu() {
 }
 
 // ---- IPC ----
-const handle = (ch, fn) => ipcMain.handle(ch, (_e, ...args) => fn(...args));
+const handle = (ch, fn) =>
+  ipcMain.handle(ch, async (_e, ...args) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      log(`ipc ${ch} failed`, e);
+      throw e;
+    }
+  });
 
 handle('settings:get', () => settings.load());
 handle('settings:set', (next) => {
@@ -210,7 +313,8 @@ handle('pty:list', () => ptys.list());
 handle('pty:read', (id, lines) => ptys.read(id, lines));
 handle('pty:runAndWait', (id, cmd, timeout) => ptys.runAndWait(id, cmd, timeout));
 handle('pty:waitFor', (id, pattern, timeout) => ptys.waitFor(id, pattern, timeout));
-ipcMain.on('pane:active', (_e, info) => (activePane = info));
+ipcMain.on('pane:active', (_e, info) => (activePane = info || activePane));
+ipcMain.on('app:log', (_e, ...parts) => log('renderer', ...parts));
 
 handle('git:status', (cwd) => git.status(cwd));
 handle('git:diff', (cwd, file, staged, untracked) => git.diff(cwd, file, staged, untracked));
@@ -227,6 +331,7 @@ handle('git:worktrees', (cwd) => git.worktrees(cwd));
 handle('git:worktreeAdd', (cwd, o) => git.worktreeAdd(cwd, o));
 handle('git:worktreeRemove', (cwd, p, f) => git.worktreeRemove(cwd, p, f));
 handle('git:root', (cwd) => git.root(cwd));
+handle('git:init', (cwd) => git.init(cwd));
 
 handle('fs:list', (dir, hidden) => files.listDir(dir, hidden));
 handle('fs:projectFiles', (cwd) => files.projectFiles(cwd));
@@ -314,7 +419,8 @@ function dispatchControl(method, params) {
     const id = uid('rq');
     pending.set(id, { resolve, reject });
     send('control:request', id, method, params);
-    const timeout = Math.max(15000, (params.timeout || 0) + 5000);
+    // Long-running tools (terminal_run, terminal_wait_for) default to waiting 30–60 s themselves.
+    const timeout = Math.max(15000, (params.timeout || 60000) + 5000);
     setTimeout(() => {
       if (pending.delete(id)) reject(new Error(`Timed out running ${method}`));
     }, timeout);
@@ -322,6 +428,7 @@ function dispatchControl(method, params) {
 }
 
 app.whenReady().then(async () => {
+  if (!gotLock) return;
   nativeTheme.themeSource = 'dark';
   if (!app.isPackaged && process.platform === 'darwin') {
     try {
@@ -342,6 +449,12 @@ app.on('web-contents-created', (_e, contents) => {
   contents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+  // Keys pressed inside the preview never reach TermC's window; forward ⌘-shortcuts so they keep working.
+  contents.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown' || !input.meta) return;
+    if (['c', 'v', 'x', 'a', 'z'].includes(String(input.key).toLowerCase()) && !input.shift && !input.alt) return;
+    send('preview:key', { code: input.code, key: input.key, metaKey: true, shiftKey: input.shift, altKey: input.alt, ctrlKey: input.control });
   });
 });
 

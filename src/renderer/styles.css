@@ -812,3 +812,8 @@ body.resizing .split-child { transition: none; }
 .ai-cmd { align-items: flex-start; }
 .ai-cmd .prompt { padding-top: 11px; }
 .ai-cmd textarea { flex: 1; border: 0; background: transparent; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px 0; resize: none; word-break: break-all; }
+
+/* Error boundary fallback */
+.error-box { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; margin: 12px; border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--danger) 7%, var(--panel)); font-size: 12.5px; max-width: 420px; }
+.error-box span { color: var(--muted); overflow-wrap: anywhere; }
+.statusbar .error-box, .tabbar .error-box { margin: 0; padding: 4px 8px; flex-direction: row; }

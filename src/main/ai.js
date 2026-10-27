@@ -1,6 +1,7 @@
 // Natural-language → shell command. Free by default: uses the locally installed
 // Claude Code CLI or Ollama; API keys (Anthropic / OpenAI-compatible) are optional.
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const settings = require('./settings');
@@ -72,7 +73,7 @@ function claudeCli(prompt) {
     const env = { ...process.env };
     delete env.CLAUDECODE;
     delete env.CLAUDE_CODE_ENTRYPOINT;
-    const p = spawn('claude', ['-p', '--output-format', 'text', '--model', 'haiku', prompt], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawn('claude', ['-p', '--output-format', 'text', '--model', 'haiku', prompt], { env, cwd: os.tmpdir(), stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     p.stdout.on('data', (d) => (out += d));

@@ -92,7 +92,7 @@ TermC notices when Claude Code, Codex CLI or Gemini CLI is running in a pane. If
 
 ### Screenshots for Claude Code
 
-Press `⇧⌘S` anywhere on your Mac and select a region. The image is saved per project and its path is pasted into the focused pane, where Claude Code shows it as `[Image #N]`. The shortcut is configurable, and Settings → Screenshots has the full history.
+Press `⌃⇧⌘S` anywhere on your Mac (or `⇧⌘S` inside TermC) and select a region. The image is saved per project and its path is pasted into the focused pane, where Claude Code shows it as `[Image #N]`. The shortcut is configurable, and Settings → Screenshots has the full history.
 
 ### MCP server: let agents drive your terminal
 
@@ -123,6 +123,10 @@ Themes: TermC Dark, Dracula, Nord, Solarized Dark/Light, plus Tokyo Night, Catpp
 ![Theme picker](docs/images/appearance.png)
 
 Write your own plugin in a few lines; see the [plugin guide](docs/plugins.md).
+
+### Safe by default
+
+TermC asks before quitting or closing a pane would stop something that's still running (a dev server, Claude Code, a build). If the interface ever crashes or freezes, it reloads and reconnects to your shells without losing them.
 
 ### Smooth by default
 

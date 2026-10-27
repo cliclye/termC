@@ -48,7 +48,8 @@ The **AI Sessions** sidebar (`⇧⌘A`) also lists recent sessions for the curre
 
 ## Screenshots for Claude Code
 
-1. Press `⇧⌘S` anywhere. It's a global shortcut, so TermC doesn't need focus.
+1. Press `⌃⇧⌘S` anywhere. It's a global shortcut, so TermC doesn't need focus. Inside TermC, `⇧⌘S` works too.
+   (The global default isn't `⇧⌘S` because that's "Save As" in most Mac apps, and a global shortcut would take it over everywhere.)
 2. Drag to select a region (press Space to pick a window, Esc to cancel).
 3. The PNG is saved to `~/.termc/screenshots/<project>/` and its path is pasted into the focused pane. Claude Code turns a pasted image path into `[Image #N]`.
 

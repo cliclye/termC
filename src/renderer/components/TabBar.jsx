@@ -40,7 +40,7 @@ export default function TabBar() {
               key={t.id}
               className={`tab ${t.id === ws.activeTabId ? 'active' : ''} ${dragOver === t.id ? 'drag-over' : ''}`}
               onMouseDown={(e) => e.button === 0 && S.switchTab(t.id)}
-              onAuxClick={(e) => e.button === 1 && S.closeTab(t.id)}
+              onAuxClick={(e) => e.button === 1 && S.closeTabSafely(t.id)}
               onDoubleClick={() => setEditing(t.id)}
               draggable={editing !== t.id}
               onDragStart={(e) => e.dataTransfer.setData('application/x-termc-tab', t.id)}
@@ -83,7 +83,7 @@ export default function TabBar() {
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  S.closeTab(t.id);
+                  S.closeTabSafely(t.id);
                 }}
               >
                 <Icon name="x" size={12} />

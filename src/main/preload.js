@@ -6,13 +6,20 @@ const on = (channel) => (fn) => {
   return () => ipcRenderer.removeListener(channel, h);
 };
 
+// Electron wraps errors as "Error invoking remote method 'x': Error: msg"; surface just the message.
+const call = (channel, ...args) =>
+  ipcRenderer.invoke(channel, ...args).catch((e) => {
+    throw new Error(String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+  });
+
 const invoke =
   (channel) =>
   (...args) =>
-    ipcRenderer.invoke(channel, ...args);
+    call(channel, ...args);
 
 contextBridge.exposeInMainWorld('termc', {
-  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  invoke: call,
+  log: (...parts) => ipcRenderer.send('app:log', ...parts.map(String)),
   pty: {
     create: invoke('pty:create'),
     write: (id, data) => ipcRenderer.send('pty:write', id, data),
@@ -36,6 +43,7 @@ contextBridge.exposeInMainWorld('termc', {
     control: on('control:request'),
     beforeQuit: on('app:before-quit'),
     menu: on('menu'),
+    previewKey: on('preview:key'),
   },
   pathForFile: (file) => webUtils.getPathForFile(file),
 });

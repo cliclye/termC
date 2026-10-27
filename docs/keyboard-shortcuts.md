@@ -9,7 +9,8 @@ Shortcuts also appear in the command palette (`⌘K`) and in Settings → Shortc
 | AI: generate shell command | `⇧⌘K` |
 | Settings | `⌘,` |
 | Plugin store | `⇧⌘X` |
-| Screenshot into terminal (global, configurable) | `⇧⌘S` |
+| Screenshot into terminal (works anywhere, configurable) | `⌃⇧⌘S` |
+| Screenshot into terminal (while TermC is focused) | `⇧⌘S` |
 
 ## Tabs
 | Action | Shortcut |
@@ -66,5 +67,7 @@ Shortcuts also appear in the command palette (`⌘K`) and in Settings → Shortc
 | Insert absolute path (file picker) | `⌘↩` |
 | AI result: run / insert without running | `↩` / `⌘↩` |
 | Close | `Esc` |
+
+While the dev-server preview has focus, TermC's ⌘-shortcuts still work; there `⌘W` closes the preview and `⌘R` reloads it.
 
 Plugins can add their own shortcuts. For example, Snippets adds `⌥⌘U` (insert UUID) and `⌥⌘I` (insert snippet).
